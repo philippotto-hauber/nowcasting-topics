@@ -130,55 +130,75 @@ plot(y_q_o', '-o','Color', [0.4940, 0.1840, 0.5560]);
 % state space representation
 %-------------------------------------------------------------------------%
 
-Ns = Nr * Np_eff; % 
-if Nw > 0 && Nd > 0; Ns = Ns+Nr;end 
-if Nm > 0 && (Nw > 0 || Nd > 0) ; Ns = Ns+Nr;end 
-if Nq > 0 && (Nm > 0 || Nw > 0 || Nd > 0); Ns = Ns+Nr;end 
-
-% T, => time-varying
-T0 = eye(Ns);
-T0(Nr*Np_eff+1:Ns,1:Nr) = repmat(-eye(Nr), (Ns - Nr*Np_eff)/Nr, 1);
-iT0 = T0 \ eye(Ns); 
-
-T = NaN(Ns, Ns, Nt);
-for t = 1:Nt
-    Ttmp = [Phi zeros(Nr, Ns-size(Phi, 2));
-            eye(Nr * (Np_eff-1)) zeros(Nr * (Np_eff-1), Ns - Nr * (Np_eff-1))];
-    if Nw > 0 && Nd > 0 % if there are weekly series and its not the highest frequency. Otherwise its dynamics are governed by phi_f!
-        Ttmp = [Ttmp; zeros(Nr, size(Ttmp, 1)) Xi_w(t) * eye(Nr) zeros(Nr, Ns - (size(Ttmp, 1) + Nr))];
-    end
-    if Nm > 0 && (Nw > 0 || Nd > 0) 
-        Ttmp = [Ttmp; zeros(Nr, size(Ttmp, 1)) Xi_m(t) * eye(Nr) zeros(Nr, Ns - (size(Ttmp, 1) + Nr))];
-    end
-    if Nq > 0 && (Nm > 0 || Nw > 0 || Nd > 0)
-        Ttmp = [Ttmp; zeros(Nr, size(Ttmp, 1)) Xi_q(t) * eye(Nr) zeros(Nr, Ns - (size(Ttmp, 1) + Nr))];
-    end
-    
-    T(:, :, t) = iT0 * Ttmp;
-end
-
-% R, Q 
-Q = zeros(Ns);
-Q(1:Nr, 1:Nr) = Omeg; 
-R = iT0; 
-
-% Z, H 
-Z_d = []; if Nd > 0; Z_d = [lam_d; zeros(Nw+Nm+Nq, Nr)]; end
-Z_w = []; if Nw > 0; Z_w = [zeros(Nd, Nr); lam_w; zeros(Nm+Nq, Nr)]; end
-Z_m = []; if Nm > 0; Z_m = [zeros(Nd+Nw, Nr); lam_m; zeros(Nq, Nr)]; end
-Z_q = []; if Nq > 0; Z_q = [zeros(Nd+Nw+Nm, Nr); lam_q]; end
-Z = [Z_d zeros(Nd+Nw+Nm+Nq, Nr * (Np_eff-1)) Z_w Z_m Z_q]; 
-
-H = diag([sig2_d; sig2_w; sig2_m; sig2_q]);
+% Ns = Nr * Np_eff; % 
+% if Nw > 0 && Nd > 0; Ns = Ns+Nr;end 
+% if Nm > 0 && (Nw > 0 || Nd > 0) ; Ns = Ns+Nr;end 
+% if Nq > 0 && (Nm > 0 || Nw > 0 || Nd > 0); Ns = Ns+Nr;end 
+% 
+% % T, => time-varying
+% T0 = eye(Ns);
+% T0(Nr*Np_eff+1:Ns,1:Nr) = repmat(-eye(Nr), (Ns - Nr*Np_eff)/Nr, 1);
+% iT0 = T0 \ eye(Ns); 
+% 
+% T = NaN(Ns, Ns, Nt);
+% for t = 1:Nt
+%     Ttmp = [Phi zeros(Nr, Ns-size(Phi, 2));
+%             eye(Nr * (Np_eff-1)) zeros(Nr * (Np_eff-1), Ns - Nr * (Np_eff-1))];
+%     if Nw > 0 && Nd > 0 % if there are weekly series and its not the highest frequency. Otherwise its dynamics are governed by phi_f!
+%         Ttmp = [Ttmp; zeros(Nr, size(Ttmp, 1)) Xi_w(t) * eye(Nr) zeros(Nr, Ns - (size(Ttmp, 1) + Nr))];
+%     end
+%     if Nm > 0 && (Nw > 0 || Nd > 0) 
+%         Ttmp = [Ttmp; zeros(Nr, size(Ttmp, 1)) Xi_m(t) * eye(Nr) zeros(Nr, Ns - (size(Ttmp, 1) + Nr))];
+%     end
+%     if Nq > 0 && (Nm > 0 || Nw > 0 || Nd > 0)
+%         Ttmp = [Ttmp; zeros(Nr, size(Ttmp, 1)) Xi_q(t) * eye(Nr) zeros(Nr, Ns - (size(Ttmp, 1) + Nr))];
+%     end
+%     
+%     T(:, :, t) = iT0 * Ttmp;
+% end
+% 
+% % R, Q 
+% Q = zeros(Ns);
+% Q(1:Nr, 1:Nr) = Omeg; 
+% R = iT0; 
+% 
+% % Z, H 
+% Z_d = []; if Nd > 0; Z_d = [lam_d; zeros(Nw+Nm+Nq, Nr)]; end
+% Z_w = []; if Nw > 0; Z_w = [zeros(Nd, Nr); lam_w; zeros(Nm+Nq, Nr)]; end
+% Z_m = []; if Nm > 0; Z_m = [zeros(Nd+Nw, Nr); lam_m; zeros(Nq, Nr)]; end
+% Z_q = []; if Nq > 0; Z_q = [zeros(Nd+Nw+Nm, Nr); lam_q]; end
+% Z = [Z_d zeros(Nd+Nw+Nm+Nq, Nr * (Np_eff-1)) Z_w Z_m Z_q]; 
+% 
+% H = diag([sig2_d; sig2_w; sig2_m; sig2_q]);
 
 %-------------------------------------------------------------------------%
 % run Kalman smoother (E-step!)
 %-------------------------------------------------------------------------%
 
-s0 = zeros(Ns, 1); P0 = 10 * eye(Ns);
+% collect parameters in structure
+params.lam_d = lam_d;
+params.lam_w = lam_w;
+params.lam_m = lam_m;
+params.lam_q = lam_q;
+params.sig2_d = sig2_d;
+params.sig2_w = sig2_w;
+params.sig2_m = sig2_m;
+params.sig2_q = sig2_q;
+params.Xi_w = Xi_w;
+params.Xi_m = Xi_m;
+params.Xi_q = Xi_q;
+params.Phi = Phi;
+params.Omeg = Omeg;
+
+% state space form
+[Z, H, T, R, Q] = f_state_space_params(params);
+
+% Kalman smoother
+s0 = zeros(size(Z, 2), 1); P0 = 10 * eye(size(Z, 2));
 tic
 [stT,PtT,LL] = f_KS_DK_logL([y_d_o; y_w_o; y_m_o; y_q_o],T,Z,H,R,Q,s0,P0);
 toc
+
 figure;
 subplot(2,2,1)
 plot(stT(1:Nr, :)', 'b')
@@ -196,7 +216,7 @@ hold on
 plot(f_m', 'r')
 title('f_m (sampled in blue)')
 subplot(2,2,4)
-plot(stT(Ns-Nr+1:end, :)', 'b')
+plot(stT(end-Nr+1:end, :)', 'b')
 hold on
 plot(f_q', 'r')
 title('f_q (sampled in blue)')
@@ -218,10 +238,10 @@ id_f = Nr * (Np_eff+1)+1:Nr * (Np_eff+2);
 [lam_m_hat, sig2_m_hat] = f_sample_lam_sig(y_m_o, stT(id_f, :), PtT(id_f, id_f, :), sig2_m);
 
 % lam_q and sig_q
-id_f = Ns-Nr+1:Ns;
+id_f = Nr * (Np_eff+2)+1:Nr * (Np_eff+3);
 [lam_q_hat, sig2_q_hat] = f_sample_lam_sig(y_q_o, stT(id_f, :), PtT(id_f, id_f, :), sig2_q);
 
-% phi_f and Omeg
+% Phi and Omeg
 id_f = 1:Nr;
 id_f_lags = Nr+1:Nr * Np_eff;
 Phi_hat = (stT(id_f, :)*stT(id_f_lags, :)' + sum(PtT(id_f,id_f_lags,:),3))/(stT(id_f_lags, :)*stT(id_f_lags, :)' + sum(PtT(id_f_lags,id_f_lags,:),3)) ; 

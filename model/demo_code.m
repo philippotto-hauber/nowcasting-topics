@@ -19,10 +19,10 @@ clear; close all; clc;
 %-------------------------------------------------------------------------%
 
 % set-up
-Nd = 100; % # of daily series  
-Nw = 10; % # of weekly series
-Nm = 10; % # of monthly series
-Nq = 10; % # of quarterly series
+Nd = 10; % # of daily series  
+Nw = 3; % # of weekly series
+Nm = 4; % # of monthly series
+Nq = 0; % # of quarterly series
 Nr = 2; % # of factors
 Np = 3; % # of lags in factor VAR
 Np_eff = Np + 1; % # of lags of f in state vector (always needs to be one higher for covariance of factors in M-step!)
@@ -114,7 +114,8 @@ plot(f', 'Color', [0, 0.4470, 0.7410]);
 hold on; 
 plot(f_w', 'Color', [0.8500, 0.3250, 0.0980]);
 plot(f_m', 'Color', [0.9290, 0.6940, 0.1250]);
-plot(f_q', 'Color', [0.4940, 0.1840, 0.5560]);
+plot(f_q')
+title('Simulated factors')
 
 figure; 
 plot(y_d', 'Color', [0, 0.4470, 0.7410]); 
@@ -125,6 +126,7 @@ plot(y_m', '-', 'Color', [0.9290, 0.6940, 0.1250, 0.2]);
 plot(y_m_o', '-o','Color', [0.9290, 0.6940, 0.1250]);
 plot(y_q', '-','Color', [0.4940, 0.1840, 0.5560, 0.2]);
 plot(y_q_o', '-o','Color', [0.4940, 0.1840, 0.5560]);
+title('Simulated observations')
 
 %-------------------------------------------------------------------------%
 % run Kalman smoother (E-step!)
@@ -154,59 +156,83 @@ tic
 [stT,PtT,LL] = f_KS_DK_logL([y_d_o; y_w_o; y_m_o; y_q_o],T,Z,H,R,Q,s0,P0);
 toc
 
+% plot actual and sampled states
+nrow_plot = double(Nd > 0) + double(Nw > 0) + double(Nm > 0) + double(Nq > 0);
+
+[id_f, id_f_lags, id_f_d, id_f_w, id_f_m, id_f_q] = f_id_fs(Nr, Np_eff, Nd, Nw, Nm, Nq); % get positions of factors in state vector
+
 figure;
-subplot(2,2,1)
-plot(stT(1:Nr, :)', 'b')
+counter = 1;
+if Nd > 0
+subplot(nrow_plot,1,counter)
+plot(stT(id_f_d, :)', 'b')
 hold on
 plot(f', 'r')
 title('f_d (sampled in blue)')
-subplot(2,2,2)
-plot(stT(Nr+1:2*Nr, :)', 'b')
+counter = counter + 1;
+end
+
+if Nw > 0
+subplot(nrow_plot,1,counter)
+plot(stT(id_f_w, :)', 'b')
 hold on
 plot(f_w', 'r')
 title('f_w (sampled in blue)')
-subplot(2,2,3)
-plot(stT(2*Nr+1:3*Nr, :)', 'b')
+counter = counter + 1;
+end
+
+if Nm > 0
+subplot(nrow_plot,1,counter)
+plot(stT(id_f_m, :)', 'b')
 hold on
 plot(f_m', 'r')
 title('f_m (sampled in blue)')
-subplot(2,2,4)
-plot(stT(end-Nr+1:end, :)', 'b')
+counter = counter + 1;
+end
+
+if Nq > 0
+subplot(nrow_plot,1,counter)
+plot(stT(id_f_q, :)', 'b')
 hold on
 plot(f_q', 'r')
 title('f_q (sampled in blue)')
+end
 
 %-------------------------------------------------------------------------%
 % estimate parameters (M-step)
 %-------------------------------------------------------------------------%
 
+% get positions of factors in state vector
+[id_f, id_f_lags, id_f_d, id_f_w, id_f_m, id_f_q] = f_id_fs(Nr, Np_eff, Nd, Nw, Nm, Nq);
+
 % lam_d and sig_d
-id_f = 1:Nr; id_x = 1:Nd;
-[lam_d_hat, sig_d_hat] = f_sample_lam_sig(y_d_o, stT(id_f, :), PtT(id_f, id_f, :), sig2_d);
+if Nd > 0
+    [lam_d_hat, sig_d_hat] = f_sample_lam_sig(y_d_o, stT(id_f_d, :), PtT(id_f_d, id_f_d, :), sig2_d);
+end
 
 % lam_w and sig2_w
-id_f = Nr * Np_eff+1:Nr*(Np_eff+1);
-[lam_w_hat, sig2_w_hat] = f_sample_lam_sig(y_w_o, stT(id_f, :), PtT(id_f, id_f, :), sig2_w);
+if Nw > 0
+    [lam_w_hat, sig2_w_hat] = f_sample_lam_sig(y_w_o, stT(id_f_w, :), PtT(id_f_w, id_f_w, :), sig2_w);
+end
 
 % lam_m and sig2_m
-id_f = Nr * (Np_eff+1)+1:Nr * (Np_eff+2);
-[lam_m_hat, sig2_m_hat] = f_sample_lam_sig(y_m_o, stT(id_f, :), PtT(id_f, id_f, :), sig2_m);
+if Nm > 0
+    [lam_m_hat, sig2_m_hat] = f_sample_lam_sig(y_m_o, stT(id_f_m, :), PtT(id_f_m, id_f_m, :), sig2_m);
+end
 
 % lam_q and sig_q
-id_f = Nr * (Np_eff+2)+1:Nr * (Np_eff+3);
-[lam_q_hat, sig2_q_hat] = f_sample_lam_sig(y_q_o, stT(id_f, :), PtT(id_f, id_f, :), sig2_q);
+if Nq > 0
+    [lam_q_hat, sig2_q_hat] = f_sample_lam_sig(y_q_o, stT(id_f_q, :), PtT(id_f_q, id_f_q, :), sig2_q);
+end
 
 % Phi and Omeg
-id_f = 1:Nr;
-id_f_lags = Nr+1:Nr * Np_eff;
 Phi_hat = (stT(id_f, :)*stT(id_f_lags, :)' + sum(PtT(id_f,id_f_lags,:),3))/(stT(id_f_lags, :)*stT(id_f_lags, :)' + sum(PtT(id_f_lags,id_f_lags,:),3)) ; 
 Omeg_hat = 1/Nt * ((stT(id_f, :)*stT(id_f, :)' + sum(PtT(id_f,id_f,:),3))  - Phi_hat * (stT(id_f, :)*stT(id_f_lags, :)' + sum(PtT(id_f,id_f_lags,:),3))') ;
  
-% plot estimated versus true
-nrow_plot = 1 + Nd > 0 + Nw > 0 + Nm > 0 + Nq > 0;
-counter = 1;
+% plot estimated versus true parameters
+nrow_plot = 1 + double(Nd > 0) + double(Nw > 0) + double(Nm > 0) + double(Nq > 0); % additional row for Phi and Omeg!
 figure;
-
+counter = 1;
 subplot(nrow_plot,2,counter)
 scatter(Phi(:), Phi_hat(:))
 ylim([-1.0 1.0])

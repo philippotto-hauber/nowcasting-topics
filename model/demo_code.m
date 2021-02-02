@@ -203,88 +203,11 @@ Phi_hat = (stT(id_f, :)*stT(id_f_lags, :)' + sum(PtT(id_f,id_f_lags,:),3))/(stT(
 Omeg_hat = 1/Nt * ((stT(id_f, :)*stT(id_f, :)' + sum(PtT(id_f,id_f,:),3))  - Phi_hat * (stT(id_f, :)*stT(id_f_lags, :)' + sum(PtT(id_f,id_f_lags,:),3))') ;
  
 % plot estimated versus true
+nrow_plot = 1 + Nd > 0 + Nw > 0 + Nm > 0 + Nq > 0;
+counter = 1;
 figure;
-subplot(5,2,1)
-scatter(lam_d(:, 1), lam_d_hat(:, 1), 'b')
-hold on;
-scatter(lam_d(:, 2), lam_d_hat(:, 2), 'r')
-ylim([-1 1])
-xlim([-1 1])
-refline(1, 0)
-title('lam_d')
-ylabel('estimate')
-xlabel('actual')
 
-subplot(5,2,2)
-scatter(sig2_d, sig_d_hat)
-ylim([0 1])
-xlim([0 1])
-refline(1, 0)
-title('sig_d')
-ylabel('estimate')
-xlabel('actual')
-
-subplot(5,2,3)
-scatter(lam_w(:, 1), lam_w_hat(:, 1), 'b')
-hold on;
-scatter(lam_w(:, 2), lam_w_hat(:, 2), 'r')
-ylim([-1 1])
-xlim([-1 1])
-refline(1, 0)
-title('lam_w')
-ylabel('estimate')
-xlabel('actual')
-
-subplot(5,2,4)
-scatter(sig2_w, sig2_w_hat)
-ylim([0 1])
-xlim([0 1])
-refline(1, 0)
-title('sig_w')
-ylabel('estimate')
-xlabel('actual')
-
-subplot(5,2,5)
-scatter(lam_m(:, 1), lam_m_hat(:, 1), 'b')
-hold on;
-scatter(lam_m(:, 2), lam_m_hat(:, 2), 'r')
-ylim([-1 1])
-xlim([-1 1])
-refline(1, 0)
-title('lam_m')
-ylabel('estimate')
-xlabel('actual')
-
-subplot(5,2,6)
-scatter(sig2_m, sig2_m_hat)
-ylim([0 1])
-xlim([0 1])
-refline(1, 0)
-title('sig_m')
-ylabel('estimate')
-xlabel('actual')
-
-subplot(5,2,7)
-scatter(lam_q(:, 1), lam_q_hat(:, 1), 'b')
-hold on;
-scatter(lam_q(:, 2), lam_q_hat(:, 2), 'r')
-ylim([-1 1])
-xlim([-1 1])
-refline(1, 0)
-title('lam_q')
-ylabel('estimate')
-xlabel('actual')
-
-subplot(5,2,8)
-scatter(sig2_q, sig2_q_hat)
-ylim([0 1])
-xlim([0 1])
-refline(1, 0)
-title('sig_q')
-ylabel('estimate')
-xlabel('actual')
-
-subplot(5,2,9)
+subplot(nrow_plot,2,counter)
 scatter(Phi(:), Phi_hat(:))
 ylim([-1.0 1.0])
 xlim([-1.0 1.0])
@@ -292,7 +215,9 @@ refline(1, 0)
 title('Phi')
 ylabel('estimate')
 xlabel('actual')
-subplot(5,2,10)
+counter = counter + 1;
+
+subplot(nrow_plot,2,counter)
 scatter(Omeg(:), Omeg_hat(:))
 ylim([-1.5 1.5])
 xlim([-1.5 1.5])
@@ -300,3 +225,100 @@ refline(1, 0)
 title('Omeg')
 ylabel('estimate')
 xlabel('actual')
+counter = counter + 1;
+
+if Nd > 0
+    subplot(nrow_plot,2,counter)
+    scatter(lam_d(:, 1), lam_d_hat(:, 1), 'b')
+    hold on;
+    scatter(lam_d(:, 2), lam_d_hat(:, 2), 'r')
+    ylim([-1 1])
+    xlim([-1 1])
+    refline(1, 0)
+    title('lam_d')
+    ylabel('estimate')
+    xlabel('actual')
+    counter = counter + 1;
+
+    subplot(nrow_plot,2,counter)
+    scatter(sig2_d, sig_d_hat)
+    ylim([0 1])
+    xlim([0 1])
+    refline(1, 0)
+    title('sig_d')
+    ylabel('estimate')
+    xlabel('actual')
+    counter = counter + 1;
+end
+
+if Nw > 0
+    subplot(nrow_plot,2,counter)
+    scatter(lam_w(:, 1), lam_w_hat(:, 1), 'b')
+    hold on;
+    scatter(lam_w(:, 2), lam_w_hat(:, 2), 'r')
+    ylim([-1 1])
+    xlim([-1 1])
+    refline(1, 0)
+    title('lam_w')
+    ylabel('estimate')
+    xlabel('actual')
+    counter = counter + 1;
+
+    subplot(nrow_plot,2,counter)
+    scatter(sig2_w, sig2_w_hat)
+    ylim([0 1])
+    xlim([0 1])
+    refline(1, 0)
+    title('sig_w')
+    ylabel('estimate')
+    xlabel('actual')
+    counter = counter + 1;
+end
+
+if Nm > 0
+    subplot(nrow_plot,2,counter)
+    scatter(lam_m(:, 1), lam_m_hat(:, 1), 'b')
+    hold on;
+    scatter(lam_m(:, 2), lam_m_hat(:, 2), 'r')
+    ylim([-1 1])
+    xlim([-1 1])
+    refline(1, 0)
+    title('lam_m')
+    ylabel('estimate')
+    xlabel('actual')
+    counter = counter + 1;
+
+    subplot(nrow_plot,2,counter)
+    scatter(sig2_m, sig2_m_hat)
+    ylim([0 1])
+    xlim([0 1])
+    refline(1, 0)
+    title('sig_m')
+    ylabel('estimate')
+    xlabel('actual')
+    counter = counter + 1;
+end
+
+if Nq > 0
+    subplot(nrow_plot,2,counter)
+    scatter(lam_q(:, 1), lam_q_hat(:, 1), 'b')
+    hold on;
+    scatter(lam_q(:, 2), lam_q_hat(:, 2), 'r')
+    ylim([-1 1])
+    xlim([-1 1])
+    refline(1, 0)
+    title('lam_q')
+    ylabel('estimate')
+    xlabel('actual')
+    counter = counter + 1;
+
+    subplot(nrow_plot,2,counter)
+    scatter(sig2_q, sig2_q_hat)
+    ylim([0 1])
+    xlim([0 1])
+    refline(1, 0)
+    title('sig_q')
+    ylabel('estimate')
+    xlabel('actual')
+    counter = counter + 1;
+end

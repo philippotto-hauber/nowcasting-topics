@@ -127,51 +127,6 @@ plot(y_q', '-','Color', [0.4940, 0.1840, 0.5560, 0.2]);
 plot(y_q_o', '-o','Color', [0.4940, 0.1840, 0.5560]);
 
 %-------------------------------------------------------------------------%
-% state space representation
-%-------------------------------------------------------------------------%
-
-% Ns = Nr * Np_eff; % 
-% if Nw > 0 && Nd > 0; Ns = Ns+Nr;end 
-% if Nm > 0 && (Nw > 0 || Nd > 0) ; Ns = Ns+Nr;end 
-% if Nq > 0 && (Nm > 0 || Nw > 0 || Nd > 0); Ns = Ns+Nr;end 
-% 
-% % T, => time-varying
-% T0 = eye(Ns);
-% T0(Nr*Np_eff+1:Ns,1:Nr) = repmat(-eye(Nr), (Ns - Nr*Np_eff)/Nr, 1);
-% iT0 = T0 \ eye(Ns); 
-% 
-% T = NaN(Ns, Ns, Nt);
-% for t = 1:Nt
-%     Ttmp = [Phi zeros(Nr, Ns-size(Phi, 2));
-%             eye(Nr * (Np_eff-1)) zeros(Nr * (Np_eff-1), Ns - Nr * (Np_eff-1))];
-%     if Nw > 0 && Nd > 0 % if there are weekly series and its not the highest frequency. Otherwise its dynamics are governed by phi_f!
-%         Ttmp = [Ttmp; zeros(Nr, size(Ttmp, 1)) Xi_w(t) * eye(Nr) zeros(Nr, Ns - (size(Ttmp, 1) + Nr))];
-%     end
-%     if Nm > 0 && (Nw > 0 || Nd > 0) 
-%         Ttmp = [Ttmp; zeros(Nr, size(Ttmp, 1)) Xi_m(t) * eye(Nr) zeros(Nr, Ns - (size(Ttmp, 1) + Nr))];
-%     end
-%     if Nq > 0 && (Nm > 0 || Nw > 0 || Nd > 0)
-%         Ttmp = [Ttmp; zeros(Nr, size(Ttmp, 1)) Xi_q(t) * eye(Nr) zeros(Nr, Ns - (size(Ttmp, 1) + Nr))];
-%     end
-%     
-%     T(:, :, t) = iT0 * Ttmp;
-% end
-% 
-% % R, Q 
-% Q = zeros(Ns);
-% Q(1:Nr, 1:Nr) = Omeg; 
-% R = iT0; 
-% 
-% % Z, H 
-% Z_d = []; if Nd > 0; Z_d = [lam_d; zeros(Nw+Nm+Nq, Nr)]; end
-% Z_w = []; if Nw > 0; Z_w = [zeros(Nd, Nr); lam_w; zeros(Nm+Nq, Nr)]; end
-% Z_m = []; if Nm > 0; Z_m = [zeros(Nd+Nw, Nr); lam_m; zeros(Nq, Nr)]; end
-% Z_q = []; if Nq > 0; Z_q = [zeros(Nd+Nw+Nm, Nr); lam_q]; end
-% Z = [Z_d zeros(Nd+Nw+Nm+Nq, Nr * (Np_eff-1)) Z_w Z_m Z_q]; 
-% 
-% H = diag([sig2_d; sig2_w; sig2_m; sig2_q]);
-
-%-------------------------------------------------------------------------%
 % run Kalman smoother (E-step!)
 %-------------------------------------------------------------------------%
 

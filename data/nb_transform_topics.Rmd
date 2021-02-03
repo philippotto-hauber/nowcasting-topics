@@ -9,6 +9,7 @@ This notebook illustrates how we transform the raw daily time series of topics b
 
 ```{r}
 rm(list = ls())
+setwd("C:/Users/Philipp/Documents/GitHub/nowcasting-topics/data/")
 library(ggplot2)
 library(lubridate)
 library(dplyr)
@@ -195,13 +196,13 @@ df_ma <- as.data.frame(dat_ma)
 df_ma$date <- df_topics$date
 df_ma %>% 
   pivot_longer(cols = -date, names_to = "topics", values_to = "vals") %>%
-  mutate(series = "moving average") -> df_ma
+  mutate(series = "smoothed") -> df_ma
 
 df_bw <- as.data.frame(dat_bw)
 df_bw$date <- df_topics$date
 df_bw %>% 
   pivot_longer(cols = -date, names_to = "topics", values_to = "vals") %>%
-  mutate(series = "bw filter") -> df_bw
+  mutate(series = "filtered") -> df_bw
 
 # merge into one df
 df_plot <- rbind(df_ma, df_bw)
@@ -210,7 +211,7 @@ df_plot <- rbind(df_plot, df_trafo)
 
 # convert series to factor and reorder levels
 df_plot$series <- as.factor(df_plot$series)
-df_plot$series = factor(df_plot$series,levels(df_plot$series)[c(4, 3, 1, 2)])
+df_plot$series = factor(df_plot$series,levels(df_plot$series)[c(3, 4, 1, 2)])
 ```
 
 ```{r}
@@ -228,33 +229,34 @@ ggplot(filter(df_plot, topics %in% c("T0", "T1", "T2", "T3", "T4", "T5", "T11", 
        )+
   geom_line()+
   scale_color_manual(name = element_blank(), 
-                     values = c("bw filter" = "blue4", 
-                                "moving average" = "blue4",
+                     values = c("filtered" = "blue4", 
+                                "smoothed" = "blue4",
                                 "original" = "gray80",
                                 "final" = "darkorange3"))+
   scale_linetype_manual(name = element_blank(), 
-                        values = c("bw filter" = "dotted", 
-                                   "moving average" = "solid", 
+                        values = c("filtered" = "dotted", 
+                                   "smoothed" = "solid", 
                                    "original" = "solid",
                                    "final" = "solid"))+
   scale_alpha_manual(name = element_blank(),
                      guide = 'none',
-                     values = c("bw filter" = 1, 
-                                "moving average" = 1, 
+                     values = c("filtered" = 1, 
+                                "smoothed" = 1, 
                                 "original" = 0.4,
                                 "final" = 1))+
   labs(x = "", y = "", 
        title = "Transformation of topics series",
-       caption = paste0("final = smoothed and detrended series. Note that the range of the y-axes is restricted to [", ylim_lowr, ", ", ylim_uppr, "] for better visibility of the smoothed and detrended series."))+
+       caption = paste0("smoothed = 60 day trailing moving average, filtered = biweight filter with bandwidth 600, final = smoothed minus filtered series.\nNote that the range of the y-axes is restricted to [", ylim_lowr, ", ", ylim_uppr, "] for better visibility of the smoothed and detrended series."))+
   ylim(c(ylim_lowr, ylim_uppr))+
   facet_wrap(~ topics , ncol = 2)+
   theme_minimal()+
   theme(legend.position = "top", 
         panel.grid.minor = element_blank(),
-         panel.grid.major = element_blank())  
+        panel.grid.major = element_blank(),
+        plot.caption = element_text(size = 7))  
 ```
 Save plot as pdf
 ```{r}
-#ggsave(paste0(dir_local, "/eval/figures/plot_forecasts_actuals.pdf"), width = 20, height = 15, units = "cm")
+ggsave(filename = "./topics_trafos.pdf", width = 20, height = 15, units = "cm")
 ```
 

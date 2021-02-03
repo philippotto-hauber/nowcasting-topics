@@ -267,3 +267,75 @@ Save plot as pdf
 ggsave(filename = "./topics_trafos.pdf", width = 20, height = 15, units = "cm")
 ```
 
+## Analysis of the transformed series
+
+### Plot all transformed time series
+
+```{r}
+stepsize <- 3
+pdf(file="plot_all_trafo_topic.pdf", paper = "a4r", width = 10, height = 8)  
+for (i in seq(1, ncol(dat_trafo), by = stepsize))
+{
+  matplot(df_topics$date, scale(dat_trafo[, i:(i+(stepsize-1))]), 
+          type = "l", main = paste0("T", i-1, " to ", i+(stepsize-2)), # topics start counting at 0!!!! 
+          col = c("cornflowerblue", "darkorange1", "darkorchid3"),
+          ylab = "", xlab = "", lty = rep(1, stepsize))
+  legend("topright", 
+       legend = paste0("T", seq(i-1, i+(stepsize-2))), # topics start counting at 0!!!! 
+       col = c("cornflowerblue", "darkorange1", "darkorchid3"),
+       lty= rep(1, stepsize), cex= 1, box.lty = 0, y.intersp=2, bg="transparent")
+}
+
+dev.off()
+```
+
+### Principal components of (transformed) topics
+
+Reimpose pattern original pattern of missings
+```{r}
+dat_pca <- dat_trafo 
+dat_pca[ind_outl] <- NA
+```
+
+Drop some topics
+```{r}
+dat_pca <- dat_pca[, -c(6), drop = F]
+```
+
+Calculate eigenvalues and plot cumulate share of explained variance
+
+```{r}
+eigvals_pca <- eigen(cor(dat_pca, use = "complete.obs"), only.values = T)
+plot(seq(1, length(eigvals_pca$values)), 
+     cumsum(eigvals_pca$values) / sum(eigvals_pca$values),
+     xlab = "eigenvalue", ylab = "share of explained variance",
+     main = "eigenvalue decomposition of dat_pca")
+```
+PCA based on EM algorithm following Stock and Watson (2002). Manually set number of factors to 10!
+```{r}
+pca <- f_emalg(scale(dat_pca), Nr_max = 10, Niter = 50, ic = "none",  print_iter = TRUE)
+```
+Plot PCs
+```{r}
+cols <- rep(c("cornflowerblue", 
+              "darkorange1", 
+              "darkorchid3", 
+              "darkolivegreen4", 
+              "brown"), times = 2)
+ltys <- rep(c(1, 2), each = 5)
+pdf(file="plot_pc_trafo.pdf", paper = "a4r", width = 10, height = 8)
+matplot(df_topics$date, pca$f, 
+        type = "l", lty = ltys, col = cols, 
+        main = "First 10 principal components of transformed topics",
+        ylab = "", xlab = "")
+legend(as.Date("2004-01-01"), 2.0, 
+       legend = paste0("PC", seq(1, 10)), 
+       col = cols,
+       lty= ltys, cex= 1, box.lty = 0, y.intersp=2, bg="transparent", ncol = 5)
+dev.off()
+```
+
+
+
+
+

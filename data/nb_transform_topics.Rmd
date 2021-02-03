@@ -1,13 +1,15 @@
 ---
 title: "Topic transformations"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 This notebook illustrates how we transform the raw daily time series of topics before estimating the daily factor model. 
 
 ## Housekeeping
 
-```{r}
+```{r echo=T, message = FALSE, warning = FALSE}
 rm(list = ls())
 setwd("C:/Users/Philipp/Documents/GitHub/nowcasting-topics/data/")
 library(ggplot2)
@@ -48,11 +50,14 @@ For the time being, I perform the transformations as is!
 
 ## Preprocessing and transformations
 
+The following plot shows a representative topic series. It is extremely noisy and characterized by a slow-moving trend (but not necessarily linear!). In this section, we illustrate how to adjust the series in order to estimate the factor model at the daily frequency. 
+
 ```{r}
 ggplot(df_topics, aes(x = date, y = T14))+geom_line(alpha = 0.5)
 ```
 
-Standardize topics
+Before proceeding, we standardize the original topics. Note that this should not have any impact on the smoothing or de-trending. It merely ensures that the original series and the final (de-trended) series are on the same scale. Note, however, that this implies that the final series will in general not have unit standard deviation. When preparing the data for the estimation, smoothing and de-trending can be performed on the original data and the resulting final series standardized. 
+
 ```{r}
 # select only topics
 dat_orig <- select(df_topics, -year, -month, -day, -date, -weekday) 
@@ -78,7 +83,7 @@ ind_outl <- apply(dat, c(2), dt_outl, aalpha = 10)
 sum(ind_outl)
 ```
 
-In total, there are `ind_outl` observations classified as outlier. Set these to `NA`. Note that these missing values will be overwritten, when we smooth the series and detrend them. Therefore we should reimpose the pattern of `NA` obtained at this stage and not use observations that were originally classified as outlier. 
+In total, there are `r sum(ind_outl)` observations classified as outlier. Set these to `NA`. Note that these missing values will be overwritten, when we smooth the series and detrend them. Therefore we should reimpose the pattern of `NA` obtained at this stage and not use observations that were originally classified as outlier. 
 
 ```{r}
 dat_rmoutl <- dat
@@ -125,7 +130,7 @@ dat_ma <- apply(dat_rmoutl, c(2), rollmean, k=60)
 
 ### Removing trends
 
-`bw_filter` function that calculates the bi-weight filter as in Stock and Watson (2012, 2016). This removes long-run trends in the series but is more flexible than a linear time trend. Allows for `NA` in the series but only at the beginning!  
+`bw_filter` function that calculates the bi-weight filter as in [Stock and Watson](https://www.princeton.edu/~mwatson/papers/Stock_Watson_Disentangling_BPEA_2012.pdf) and [Stock and Watson (2016)](https://www.princeton.edu/~mwatson/papers/Stock_Watson_DFM_HOM_030916.pdf). This removes long-run trends in the series but is more flexible than a linear time trend. While in principle two-sided, the filter becomes increasingly one-sided when approaching the endpoints. The function allows for `NA` in the series but only at the beginning!  
 ```{r}
 bw_filter <- function(y, bw)
 {
@@ -177,7 +182,7 @@ dat_bw <- apply(dat_ma, c(2), bw_filter, bw = 600)
 dat_trafo <- dat_ma - dat_bw
 ```
 
-Plot!
+### Plot selected topics
 
 ```{r}
 df_orig <- as.data.frame(dat_rmoutl)
@@ -219,7 +224,7 @@ df_plot$series = factor(df_plot$series,levels(df_plot$series)[c(3, 4, 1, 2)])
 ylim_uppr <- 3
 ylim_lowr <- -ylim_uppr
 
-ggplot(filter(df_plot, topics %in% c("T0", "T1", "T2", "T3", "T4", "T5", "T11", "T20")), 
+ggplot(filter(df_plot, topics %in% c("T0", "T1", "T3", "T4", "T5", "T11")), 
        aes(x = date, y = vals, 
            group = series, 
            col = series, 
@@ -247,12 +252,13 @@ ggplot(filter(df_plot, topics %in% c("T0", "T1", "T2", "T3", "T4", "T5", "T11", 
   labs(x = "", y = "", 
        title = "Transformation of topics series",
        caption = paste0("smoothed = 60 day trailing moving average, filtered = biweight filter with bandwidth 600, final = smoothed minus filtered series.\nNote that the range of the y-axes is restricted to [", ylim_lowr, ", ", ylim_uppr, "] for better visibility of the smoothed and detrended series."))+
-  ylim(c(ylim_lowr, ylim_uppr))+
+  scale_x_date(date_breaks = "5 years", date_labels = "%Y")+
+  scale_y_continuous(breaks = seq(ylim_lowr, ylim_uppr, by = 1), limits = c(ylim_lowr, ylim_uppr))+
   facet_wrap(~ topics , ncol = 2)+
   theme_minimal()+
   theme(legend.position = "top", 
         panel.grid.minor = element_blank(),
-        panel.grid.major = element_blank(),
+        #panel.grid.major = element_blank(),
         plot.caption = element_text(size = 7))  
 ```
 Save plot as pdf

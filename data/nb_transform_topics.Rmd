@@ -29,8 +29,9 @@ df_raw %>%
   mutate(date = make_date(year = df_raw$year, 
                          month = df_raw$month, 
                          day = df_raw$day),
-         weekday = wday(date, label = T)) %>% 
-  select(year, month, day, weekday, date, everything()) -> df_topics 
+         weekday = wday(date, label = T),
+         quarter = ceiling(month / 3)) %>% 
+  select(year, quarter, month, day, weekday, date, everything()) -> df_topics 
 
 # get rid of raw df
 rm(df_raw)
@@ -60,7 +61,7 @@ Before proceeding, we standardize the original topics. Note that this should not
 
 ```{r}
 # select only topics
-dat_orig <- select(df_topics, -year, -month, -day, -date, -weekday) 
+dat_orig <- select(df_topics, -year, -quarter, -month, -day, -date, -weekday) 
 
 # standardize
 dat <- scale(dat_orig)

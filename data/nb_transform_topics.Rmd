@@ -131,7 +131,7 @@ dat_ma <- apply(dat_rmoutl, c(2), rollmean, k=60)
 
 ### Removing trends
 
-`bw_filter` function that calculates the bi-weight filter as in [Stock and Watson](https://www.princeton.edu/~mwatson/papers/Stock_Watson_Disentangling_BPEA_2012.pdf) and [Stock and Watson (2016)](https://www.princeton.edu/~mwatson/papers/Stock_Watson_DFM_HOM_030916.pdf). This removes long-run trends in the series but is more flexible than a linear time trend. While in principle two-sided, the filter becomes increasingly one-sided when approaching the endpoints. The function allows for `NA` in the series but only at the beginning!  
+`bw_filter` function that calculates the bi-weight filter as in [Stock and Watson (2012)](https://www.princeton.edu/~mwatson/papers/Stock_Watson_Disentangling_BPEA_2012.pdf) and [Stock and Watson (2016)](https://www.princeton.edu/~mwatson/papers/Stock_Watson_DFM_HOM_030916.pdf). This removes long-run trends in the series but is more flexible than a linear time trend. While in principle two-sided, the filter becomes increasingly one-sided when approaching the endpoints. The function allows for `NA` in the series but only at the beginning!  
 ```{r}
 bw_filter <- function(y, bw)
 {
@@ -327,7 +327,7 @@ pdf(file="plot_pc_trafo.pdf", paper = "a4r", width = 10, height = 8)
 matplot(df_topics$date, pca$f, 
         type = "l", lty = ltys, col = cols, 
         main = "First 10 principal components of transformed topics",
-        ylab = "", xlab = "")
+        ylab = "standard deviations", xlab = "")
 legend(as.Date("2004-01-01"), 2.0, 
        legend = paste0("PC", seq(1, 10)), 
        col = cols,

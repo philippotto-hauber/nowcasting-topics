@@ -1,13 +1,11 @@
 ---
-title: "Topic transformations"
+title: "Analyzing topics"
 output:
   html_notebook: default
   'html_notebook:': default
 ---
 
-This notebook illustrates how we transform the raw daily time series of topics before estimating the daily factor model. 
-
-## Housekeeping
+This notebook illustrates how we transform the raw daily time series of topics before estimating the daily factor model. Additionally, it also calculates principal component estimates of transformed series and analyzes their correlation with quarterly GDP.  
 
 ```{r echo=T, message = FALSE, warning = FALSE}
 rm(list = ls())
@@ -46,7 +44,7 @@ Note that there are no rows for Sundays and bank holidays when no newspapers wer
 2) formulate the model at the weekdaily frequency with `NA` for bank holidays
 3) formulate the model under the assumption that a week contains six days with `NA` for bank holidays
 
-I personally favor 1) or 2). What does Thorsrud/the literature do? 
+I personally favor 1) or 2). ~~What does Thorsrud/the literature do?~~ He linearly interpolates the topics on Sundays and estimate the model with a full 7-day week. I am not 100 percent satisfied with that, as the additional missings on Sundays (or bank holidays) don't really pose a challenge from the point of view of estimation.  
 
 For the time being, I perform the transformations as is!
 
@@ -58,7 +56,7 @@ The following plot shows a representative topic series. It is extremely noisy an
 ggplot(df_topics, aes(x = date, y = T14))+geom_line(alpha = 0.5)
 ```
 
-Before proceeding, we standardize the original topics. Note that this should not have any impact on the smoothing or de-trending. It merely ensures that the original series and the final (de-trended) series are on the same scale. Note, however, that this implies that the final series will in general not have unit standard deviation. When preparing the data for the estimation, smoothing and de-trending can be performed on the original data and the resulting final series standardized. 
+Before proceeding, we standardize the original topics. This should not have any impact on the smoothing or de-trending. It merely ensures that the original series and the final (de-trended) series are on the same scale. Note, however, that this implies that the final series will in general not have unit standard deviation. When preparing the data for the estimation, smoothing and de-trending can be performed on the original data and the resulting final series is standardized. 
 
 ```{r}
 # select only topics
@@ -85,7 +83,7 @@ ind_outl <- apply(dat, c(2), dt_outl, aalpha = 10)
 sum(ind_outl)
 ```
 
-In total, there are `r sum(ind_outl)` observations classified as outlier. Set these to `NA`. Note that these missing values will be overwritten, when we smooth the series and detrend them. Therefore we should reimpose the pattern of `NA` obtained at this stage and not use observations that were originally classified as outlier. 
+In total, there are `r sum(ind_outl)` observations classified as outlier. Set these to `NA`. These missing values will be overwritten, when we smooth the series and de-trend them. Therefore we should reimpose the pattern of `NA` obtained at this stage and not use observations that were originally classified as outlier. 
 
 ```{r}
 dat_rmoutl <- dat
@@ -127,7 +125,8 @@ rollmean <- function(x, k){
 
 ```{r}
 # moving average
-dat_ma <- apply(dat_rmoutl, c(2), rollmean, k=60)
+K <- 60
+dat_ma <- apply(dat_rmoutl, c(2), rollmean, k = K)
 ```
 
 ### Removing trends
@@ -263,6 +262,7 @@ ggplot(filter(df_plot, topics %in% c("T0", "T1", "T3", "T4", "T5", "T11")),
         #panel.grid.major = element_blank(),
         plot.caption = element_text(size = 7))  
 ```
+
 Save plot as pdf
 ```{r}
 ggsave(filename = "./topics_trafos.pdf", width = 20, height = 15, units = "cm")

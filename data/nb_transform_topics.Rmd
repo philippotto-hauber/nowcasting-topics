@@ -1,0 +1,260 @@
+---
+title: "Topic transformations"
+output: html_notebook
+---
+
+This notebook illustrates how we transform the raw daily time series of topics before estimating the daily factor model. 
+
+## Housekeeping
+
+```{r}
+rm(list = ls())
+library(ggplot2)
+library(lubridate)
+library(dplyr)
+library(tidyr)
+```
+
+
+## Load topics
+
+```{r}
+df_raw <- read.csv("./topics/daily_topics.csv")
+
+# add date and weekday variable
+df_raw %>%
+  mutate(date = make_date(year = df_raw$year, 
+                         month = df_raw$month, 
+                         day = df_raw$day),
+         weekday = wday(date, label = T)) %>% 
+  select(year, month, day, weekday, date, everything()) -> df_topics 
+
+# get rid of raw df
+rm(df_raw)
+
+# inspect first rows of df_topics
+head(df_topics)
+```
+Note that there are no rows for Sundays and bank holidays when no newspapers were published (e.g. Twelfth Night or 6.1.1994). Need to think about how to deal with this. Basically three options:
+
+1) formulate the model at the daily frequency with `NA` for Sundays and bank holidays
+2) formulate the model at the weekdaily frequency with `NA` for bank holidays
+3) formulate the model under the assumption that a week contains six days with `NA` for bank holidays
+
+I personally favor 1) or 2). What does Thorsrud/the literature do? 
+
+For the time being, I perform the transformations as is!
+
+## Preprocessing and transformations
+
+```{r}
+ggplot(df_topics, aes(x = date, y = T14))+geom_line(alpha = 0.5)
+```
+
+Standardize topics
+```{r}
+# select only topics
+dat_orig <- select(df_topics, -year, -month, -day, -date, -weekday) 
+
+# standardize
+dat <- scale(dat_orig)
+```
+
+
+### Removing outlier
+
+In line with the nowcasting/forecasting literature, we define outlier as those observations as those that are more than 10 interquartiles ranges from the median. Note that this is a very conservative definition! 
+
+```{r}
+dt_outl <- function(y, aalpha)
+{
+  return(abs((y - median(y, na.rm = T))) > aalpha * IQR(y, na.rm = T))
+}
+
+ind_outl <- apply(dat, c(2), dt_outl, aalpha = 10)
+
+# number of outliers?
+sum(ind_outl)
+```
+
+In total, there are `ind_outl` observations classified as outlier. Set these to `NA`. Note that these missing values will be overwritten, when we smooth the series and detrend them. Therefore we should reimpose the pattern of `NA` obtained at this stage and not use observations that were originally classified as outlier. 
+
+```{r}
+dat_rmoutl <- dat
+dat_rmoutl[ind_outl] <- NA
+```
+
+Visualize series with the most outliers
+```{r}
+i <- which.max(apply(ind_outl, c(2), sum))
+tmp <- array(NA, nrow(dat))
+tmp[ind_outl[, i]] <- dat[ind_outl[, i], i]
+
+df_plot <- data.frame(date = df_topics$date, 
+                      y_nooutl = dat[, i],
+                      y_outl = tmp)
+
+ggplot(df_plot)+
+  geom_line(aes(x = date, y = y_nooutl), col = "royalblue3")+
+  geom_point(aes(x = date, y = y_outl), col = "royalblue3")
+
+rm(df_plot, i, tmp)
+```
+
+### Smoothing the raw topics
+
+To smooth the topics, we calculate a 60-day backward looking moving average. 
+
+`rollmean` function that calculates the recursive $K$-th order rolling mean, i.e. $\hat{y}_t = \frac{1}{K} \sum_{k=0}^K y_{t-k}$. Allows for `NA` in the series. 
+```{r}
+rollmean <- function(x, k){
+  xroll <- array(NA, c(length(x)))
+  for (t in seq(k, length(x)))
+    xroll[t] <- mean(x[(t-k+1):t], na.rm = TRUE)
+  
+  return(xroll)
+}
+```
+
+
+```{r}
+# moving average
+dat_ma <- apply(dat_rmoutl, c(2), rollmean, k=60)
+```
+
+### Removing trends
+
+`bw_filter` function that calculates the bi-weight filter as in Stock and Watson (2012, 2016). This removes long-run trends in the series but is more flexible than a linear time trend. Allows for `NA` in the series but only at the beginning!  
+```{r}
+bw_filter <- function(y, bw)
+{
+  # compute un-normalized weights
+  j <- seq(-bw, bw, 1) 
+  omeg = (1 - (j/bw) ^ 2) ^ 2  
+  
+  # check for NA's in y
+    n_NA <- sum(is.na(y)) 
+  y_noNA <- y[(n_NA + 1) : length(y)]
+  Nt <- length(y_noNA)
+  
+  # loop over t
+  tau <- mat.or.vec(length(y_noNA), 1)
+  for (t in 1 : length(y_noNA)) {
+    # case distinction
+    if (t <= bw) {
+      
+      indY <- c(1 : (2 * bw - (bw - t)))
+      indOmeg <- c((bw - t + 1):(2 * bw)) 
+      kap <- 1 / ( sum(omeg[indOmeg]))
+      tau[ t ] <- kap * omeg[indOmeg] %*% y_noNA[indY] 
+      
+    } else if (t > (Nt - bw)) {
+      
+      indY <- c((t - bw) : Nt)
+      indOmeg <- c(1 : (bw + 1 + (Nt - t)))
+      kap <- 1 / ( sum( omeg[indOmeg] ) )
+      tau[t] <- kap * omeg[indOmeg] %*% y_noNA[indY] 
+      
+    } else {
+      
+      indY <- seq(t - bw, t + bw, 1)
+      indOmeg <- c( 1 : (2 * bw + 1))
+      kap <- 1 / (sum(omeg[indOmeg]))
+      tau[t] <- kap * omeg[indOmeg] %*% y_noNA[indY]  
+    }
+  }
+  return(c(rep(NA, times = n_NA), tau))
+}
+```
+
+
+```{r}
+# bi-weight filter
+dat_bw <- apply(dat_ma, c(2), bw_filter, bw = 600)
+
+# de-trended topics
+dat_trafo <- dat_ma - dat_bw
+```
+
+Plot!
+
+```{r}
+df_orig <- as.data.frame(dat_rmoutl)
+df_orig$date <- df_topics$date
+df_orig %>% 
+  pivot_longer(cols = -date, names_to = "topics", values_to = "vals") %>%
+  mutate(series = "original") -> df_orig
+
+df_trafo <- as.data.frame(dat_trafo)
+df_trafo$date <- df_topics$date
+df_trafo %>% 
+  pivot_longer(cols = -date, names_to = "topics", values_to = "vals") %>%
+  mutate(series = "final") -> df_trafo
+
+df_ma <- as.data.frame(dat_ma)
+df_ma$date <- df_topics$date
+df_ma %>% 
+  pivot_longer(cols = -date, names_to = "topics", values_to = "vals") %>%
+  mutate(series = "moving average") -> df_ma
+
+df_bw <- as.data.frame(dat_bw)
+df_bw$date <- df_topics$date
+df_bw %>% 
+  pivot_longer(cols = -date, names_to = "topics", values_to = "vals") %>%
+  mutate(series = "bw filter") -> df_bw
+
+# merge into one df
+df_plot <- rbind(df_ma, df_bw)
+df_plot <- rbind(df_plot, df_orig)
+df_plot <- rbind(df_plot, df_trafo)
+
+# convert series to factor and reorder levels
+df_plot$series <- as.factor(df_plot$series)
+df_plot$series = factor(df_plot$series,levels(df_plot$series)[c(4, 3, 1, 2)])
+```
+
+```{r}
+# plot
+ylim_uppr <- 3
+ylim_lowr <- -ylim_uppr
+
+ggplot(filter(df_plot, topics %in% c("T0", "T1", "T2", "T3", "T4", "T5", "T11", "T20")), 
+       aes(x = date, y = vals, 
+           group = series, 
+           col = series, 
+           linetype = series,
+           alpha = series
+           )
+       )+
+  geom_line()+
+  scale_color_manual(name = element_blank(), 
+                     values = c("bw filter" = "blue4", 
+                                "moving average" = "blue4",
+                                "original" = "gray80",
+                                "final" = "darkorange3"))+
+  scale_linetype_manual(name = element_blank(), 
+                        values = c("bw filter" = "dotted", 
+                                   "moving average" = "solid", 
+                                   "original" = "solid",
+                                   "final" = "solid"))+
+  scale_alpha_manual(name = element_blank(),
+                     guide = 'none',
+                     values = c("bw filter" = 1, 
+                                "moving average" = 1, 
+                                "original" = 0.4,
+                                "final" = 1))+
+  labs(x = "", y = "", 
+       title = "Transformation of topics series",
+       caption = paste0("final = smoothed and detrended series. Note that the range of the y-axes is restricted to [", ylim_lowr, ", ", ylim_uppr, "] for better visibility of the smoothed and detrended series."))+
+  ylim(c(ylim_lowr, ylim_uppr))+
+  facet_wrap(~ topics , ncol = 2)+
+  theme_minimal()+
+  theme(legend.position = "top", 
+        panel.grid.minor = element_blank(),
+         panel.grid.major = element_blank())  
+```
+Save plot as pdf
+```{r}
+#ggsave(paste0(dir_local, "/eval/figures/plot_forecasts_actuals.pdf"), width = 20, height = 15, units = "cm")
+```
+

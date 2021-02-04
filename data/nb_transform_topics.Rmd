@@ -15,6 +15,7 @@ library(lubridate)
 library(dplyr)
 library(tidyr)
 library(fredmdr)
+library(bundesbank)
 ```
 
 
@@ -215,6 +216,9 @@ df_plot <- rbind(df_ma, df_bw)
 df_plot <- rbind(df_plot, df_orig)
 df_plot <- rbind(df_plot, df_trafo)
 
+# rm df's
+rm(df_ma, df_bw, df_orig, df_trafo)
+
 # convert series to factor and reorder levels
 df_plot$series <- as.factor(df_plot$series)
 df_plot$series = factor(df_plot$series,levels(df_plot$series)[c(3, 4, 1, 2)])
@@ -335,8 +339,115 @@ legend(as.Date("2004-01-01"), 2.0,
        lty= ltys, cex= 1, box.lty = 0, y.intersp=2, bg="transparent", ncol = 5)
 dev.off()
 ```
+Clean up workspace!
+```{r}
+rm(eigvals_pca, dat_pca, pca)
+```
 
 
+### Correlation analysis
 
+#### Correlation between transformed topics
+
+Calculate the correlation between the transformed topics
+```{r}
+cor_trafo <- cor(dat_trafo, use = "complete.obs")
+cor_trafo_vec <- cor_trafo[lower.tri(cor_trafo)]
+hist(cor_trafo_vec, breaks = 100)
+```
+#### Correlation with quarterly GDP growth
+
+Aggregate transformed topics to quarterly frequency
+
+```{r}
+df_trafo <- cbind(df_topics[, 1:4], as.data.frame(dat_trafo))
+
+df_trafo %>% 
+  pivot_longer(cols = -c(year, quarter, month, day), 
+               names_to = "topic", 
+               values_to = "vals") %>%
+  group_by(topic, year, quarter) %>%
+  summarise(avg_vals = mean(vals, na.rm = T)) %>%
+  pivot_wider(id_cols = c(topic, year, quarter), 
+              names_from = topic, 
+              values_from = avg_vals) -> df_trafo_Q
+```
+
+
+```{r}
+series <- "BBKRT.Q.DE.Y.A.AG1.CA010.A.I" 
+df_gdp <- getSeries("BBKRT.Q.DE.Y.A.AG1.CA010.A.I") # calendar and seasonally adjusted GDP
+
+# select last vintage and convert dates to column
+df_gdp %>% 
+  select(tail(names(.), 1)) %>%
+  rownames_to_column(var = "date") %>%
+  mutate(year = as.numeric(substr(date, 1, 4)), 
+         month = as.numeric(substr(date, 6, 7)) + 1,  
+         quarter = ceiling(month/3),
+         date = make_date(year = year, month = month + 1, day = 15) # middle of the quarter, e.g. 15.2. for Q1
+         )-> df_gdp
+
+# adjust name of series
+names(df_gdp)[2] <- "gdp"
+
+# calculate quarterly growth rate
+df_gdp$d_gdp <- c(NA, 100 * diff(log(df_gdp$gdp)))
+
+# filter to match sample of transformed topics
+df_gdp <- df_gdp[df_gdp$year >= 1994 & df_gdp$year <= 2018, ]
+```
+
+
+Calculate correlation between topics and GDP
+
+```{r}
+cor_topics_gdp <- cor(cbind(as.matrix(df_trafo_Q[, -c(1:2)]), df_gdp$d_gdp))
+
+# last row contains correlations of topics with GDP growth
+cor_topics_gdp <- cor_topics_gdp[nrow(cor_topics_gdp), 1:(ncol(cor_topics_gdp) - 1)] 
+
+# histogram
+hist(cor_topics_gdp, breaks = 20)
+             
+# sort topics
+as.data.frame(cor_topics_gdp) %>% 
+  rownames_to_column(var = "topic") %>%
+  mutate(abs_cor = abs(cor_topics_gdp)) %>%
+  arrange(desc(abs_cor)) %>%
+  head(10)
+```
+Plot 5 topics with the highest correlation 
+
+```{r}
+high_corr_topics <- c("T10", "T0", "T44", "T36", "T21") # automate!
+
+cbind(data.frame(date = df_topics$date), scale(dat_trafo))  %>% 
+  pivot_longer(cols = -date, names_to = "topic", values_to = "vals") %>%
+  filter(topic %in% high_corr_topics) %>% 
+  filter(date >= "1996-01-01" & date <= "2018-12-31") -> df_plot_topics
+
+df_gdp %>% 
+  mutate(d_gdp_stand = (d_gdp - mean(d_gdp, na.rm = T)) / sd(d_gdp, na.rm = T)) %>%
+  filter(date >= "1996-01-01" & date <= "2018-12-31") -> df_plot_gdp
+
+ggplot()+
+  geom_line(mapping = aes(x = date, y = vals, group = topic, color = topic), 
+            data = df_plot_topics, alpha = 0.5)+
+  geom_point(mapping = aes(x = date, y = d_gdp_stand), 
+             data = df_plot_gdp, size = 1, col = "black")+
+  scale_color_jco(name = element_blank())+
+  scale_x_date(date_breaks = "5 years", date_labels = "%Y")+
+  labs(y = "standard deviation", x = "", title = "Transformed topics and economic activity",
+       subtitles = "5 topics with the highest absolute correlation between quarterly GDP growth",
+       caption = "All series have been standardized. Note that the quarterly observations are placed in the middle of each quarter, e.g. February 15th for Q1.")+
+  theme(legend.position = "bottom",
+        plot.caption = element_text(size = 7))  
+```
+
+Save plot
+```{r}
+ggsave(filename = "plot_highcorr_topics_gdp.pdf", width = 20, height = 15, units = "cm")
+```
 
 

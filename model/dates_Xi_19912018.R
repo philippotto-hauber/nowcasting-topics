@@ -39,8 +39,8 @@ df %>%
 
 # create Xi indicators that equal 0 at start of period and 1 elsewhere
 df %>% 
-  mutate(Xi_q = ifelse(quarter == 1 & month == 1 & day == 1, 0, 1),
-         Xi_m = ifelse(month == 1 & day == 1, 0, 1),
+  mutate(Xi_q = ifelse(month == 1 & day == 1, 0, 1),
+         Xi_m = ifelse(day == 1, 0, 1),
          Xi_w = ifelse(weekday == "Mo", 0, 1)) -> df
 
 # export df to csv

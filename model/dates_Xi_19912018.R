@@ -43,5 +43,17 @@ df %>%
          Xi_m = ifelse(day == 1, 0, 1),
          Xi_w = ifelse(weekday == "Mo", 0, 1)) -> df
 
+# create index and dates vars containing the year on the first day, else NA
+df$ind_plot <- NA
+df$dates_plot <- NA
+for (t in seq(1, nrow(df)))
+{
+  if (df$quarter[t] == 1 && df$month[t] == 1 && df$day[t] == 1)
+  {
+    df$dates_plot[t] = df$year[t]
+    df$ind_plot[t] = t
+  }
+}
+
 # export df to csv
-write.csv(df, "dates_Xi_19912018.csv", row.names = F)
+write.csv(df, "dates_Xi_19912018.csv", row.names = F, na = "")

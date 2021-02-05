@@ -14,19 +14,33 @@ clear; close all; clc;
 %- series are stock rather than flow variables. The latter can be implemented
 %- following the (more complicated) approach in Banbura et al. (2011). 
 %- "Nowcasting with Daily Data"(https://ideas.repec.org/p/red/sed012/555.html)
+
 %-------------------------------------------------------------------------%
 % generate data
 %-------------------------------------------------------------------------%
 
 % set-up
-Nd = 10; % # of daily series  
-Nw = 3; % # of weekly series
-Nm = 4; % # of monthly series
-Nq = 0; % # of quarterly series
+Nd = 40; % # of daily series  
+Nw = 10; % # of weekly series
+Nm = 10; % # of monthly series
+Nq = 10; % # of quarterly series
 Nr = 2; % # of factors
 Np = 3; % # of lags in factor VAR
 Np_eff = Np + 1; % # of lags of f in state vector (always needs to be one higher for covariance of factors in M-step!)
-Nt = 3600; % # of observations (daily frequency)
+
+
+% load dates corresponding to Jan 1st 1991-Dec 31 2018
+tmp = importdata('dates_Xi_19912018.csv');
+Nt = size(tmp.data, 1); % # of observations (daily frequency)
+offset_nonnumvars = size(tmp.textdata, 2) - size(tmp.data, 2); % number of non-numeric vars (these are ordered first!) 
+Xi_w =  tmp.data(:, find(contains(tmp.textdata(1,:), 'Xi_w')) - offset_nonnumvars); % equals 0 if start of new week
+Xi_m =  tmp.data(:, find(contains(tmp.textdata(1,:), 'Xi_m')) - offset_nonnumvars); % equals 0 if start of new month
+Xi_q =  tmp.data(:, find(contains(tmp.textdata(1,:), 'Xi_q')) - offset_nonnumvars); % equals 0 if start of new quarter
+ind_plot = tmp.data(:, find(contains(tmp.textdata(1,:), 'ind_plot')) - offset_nonnumvars);
+ind_plot = ind_plot(~isnan(ind_plot));
+dates_plot = tmp.data(:, find(contains(tmp.textdata(1,:), 'dates_plot')) - offset_nonnumvars);
+dates_plot = dates_plot(~isnan(dates_plot));
+clearvars tmp offset_nonnumvars 
 
 % params
 lam_d = [0.6 + 0.1 * randn(Nd, 1), -0.4 + 0.1 * randn(Nd, 1)]; 
@@ -57,56 +71,51 @@ N_d_w = 5; % # of days per week => working days
 N_d_m = N_d_w * 4; % # of days per month
 N_d_q = N_d_m * 3; % # of days per quarter
 
-Xi_w = ones(Nt, 1); Xi_w(1:N_d_w:end) = 0; % equals 1 if start of new week
-Xi_m = ones(Nt, 1); Xi_m(1:N_d_m:end) = 0; % equals 1 if start of new month
-Xi_q = ones(Nt, 1); Xi_q(1:N_d_q:end) = 0; % equals 1 if start of new quarter
-
 % loop over t
-F(:, 1) = 0; 
+F(:, 1) = 0; % initialize f_0, f_-1, ..., f_-p+1
 for t = 1:Nt
     if t == 1
         F(1:Nr,t) = mvnrnd(zeros(Nr, 1), Omeg);
+        if Xi_w(t) == 0; f_w(:, t) = F(1:Nr, t); else;f_w(:, t) = F(1:Nr, t); end
+        if Xi_m(t) == 0; f_m(:, t) = F(1:Nr, t); else; f_m(:, t) = F(1:Nr, t); end
+        if Xi_q(t) == 0; f_q(:, t) = F(1:Nr, t); else; f_q(:, t) = F(1:Nr, t); end          
     else
         % daily factor 
         F(:,t) = [Phi; eye(Nr * (Np-1)) zeros(Nr * (Np-1), Nr)] * F(:, t-1) + [eye(Nr); zeros(Nr * (Np-1), Nr)] * mvnrnd(zeros(Nr, 1), Omeg)';
-    end
-    
-    % daily data
-    y_d(:, t) = lam_d * F(1:Nr, t) + sqrt(sig2_d) .* randn(Nd, 1);
+        % daily data
+        y_d(:, t) = lam_d * F(1:Nr, t) + sqrt(sig2_d) .* randn(Nd, 1);
 
-    % weekly factor and data
-    if Xi_w(t) == 0
-        f_w(:, t) = F(1:Nr, t);
-    else
-        f_w(:, t) = f_w(:, t-1) + F(1:Nr, t);
-    end
-    y_w(:, t) = lam_w * f_w(:, t) + sqrt(sig2_w) .* randn(Nw, 1);
+        % weekly factor and data
+        if Xi_w(t) == 0; f_w(:, t) = F(1:Nr, t); else;f_w(:, t) = f_w(:, t-1) + F(1:Nr, t); end
+        y_w(:, t) = lam_w * f_w(:, t) + sqrt(sig2_w) .* randn(Nw, 1);
 
-    % monthly factor and data
-    if Xi_m(t) == 0
-        f_m(:, t) = F(1:Nr, t);
-    else
-        f_m(:, t) = f_m(:, t-1) + F(1:Nr, t);
-    end
-    y_m(:, t) = lam_m * f_m(:, t) + sqrt(sig2_m) .* randn(Nm, 1);
+        % monthly factor and data
+        if Xi_m(t) == 0; f_m(:, t) = F(1:Nr, t); else; f_m(:, t) = f_m(:, t-1) + F(1:Nr, t); end
+        y_m(:, t) = lam_m * f_m(:, t) + sqrt(sig2_m) .* randn(Nm, 1);
 
-    % quarterly factor and data
-    if Xi_q(t) == 0
-        f_q(:, t) = F(1:Nr, t);
-    else
-        f_q(:, t) = f_q(:, t-1) + F(1:Nr, t);
-    end          
-    y_q(:, t) = lam_q * f_q(:, t) + sqrt(sig2_q) .* randn(Nq, 1);    
+        % quarterly factor and data
+        if Xi_q(t) == 0; f_q(:, t) = F(1:Nr, t); else; f_q(:, t) = f_q(:, t-1) + F(1:Nr, t); end          
+        y_q(:, t) = lam_q * f_q(:, t) + sqrt(sig2_q) .* randn(Nq, 1);
+    end    
 end
 
 % extract factor from companion form representation
 f = F(1:Nr, :); 
 
 % extract actually observed monthly and quarterly values
-y_d_o = y_d; 
-y_w_o = NaN(Nw, Nt);y_w_o(:, end:-N_d_w:1) = y_w(:, end:-N_d_w:1);
-y_m_o = NaN(Nm, Nt);y_m_o(:, end:-N_d_m:1) = y_m(:, end:-N_d_m:1);
+y_d_o = y_d;
+tmp = 1:Nt;
+ind_w_o = tmp(Xi_w==0) - 1;
+ind_w_o = ind_w_o(ind_w_o > 0);
+y_w_o = NaN(Nw, Nt);y_w_o(:, tmp(Xi_w==0) - 1) = y_w(:, tmp(Xi_w==0) - 1);
+ind_m_o = tmp(Xi_m==0) - 1;
+ind_m_o = ind_m_o(ind_m_o > 0);
+y_m_o = NaN(Nm, Nt);y_m_o(:, ind_m_o) = y_m(:, ind_m_o);
+ind_q_o = tmp(Xi_q==0) - 1;
+ind_q_o = ind_q_o(ind_q_o > 0);
 y_q_o = NaN(Nq, Nt);y_q_o(:, end:-N_d_q:1) = y_q(:, end:-N_d_q:1);
+clearvars tmp ind_w_o ind_m_o ind_q_o
+
 
 % plot factors and obs
 figure; 
@@ -115,6 +124,8 @@ hold on;
 plot(f_w', 'Color', [0.8500, 0.3250, 0.0980]);
 plot(f_m', 'Color', [0.9290, 0.6940, 0.1250]);
 plot(f_q')
+xticks(ind_plot(5:5:end))
+xticklabels(dates_plot(5:5:end))
 title('Simulated factors')
 
 figure; 
@@ -126,6 +137,8 @@ plot(y_m', '-', 'Color', [0.9290, 0.6940, 0.1250, 0.2]);
 plot(y_m_o', '-o','Color', [0.9290, 0.6940, 0.1250]);
 plot(y_q', '-','Color', [0.4940, 0.1840, 0.5560, 0.2]);
 plot(y_q_o', '-o','Color', [0.4940, 0.1840, 0.5560]);
+xticks(ind_plot(5:5:end))
+xticklabels(dates_plot(5:5:end))
 title('Simulated observations')
 
 %-------------------------------------------------------------------------%
@@ -169,6 +182,8 @@ plot(stT(id_f_d, :)', 'b')
 hold on
 plot(f', 'r')
 title('f_d (sampled in blue)')
+xticks(ind_plot(5:5:end))
+xticklabels(dates_plot(5:5:end))
 counter = counter + 1;
 end
 
@@ -178,6 +193,8 @@ plot(stT(id_f_w, :)', 'b')
 hold on
 plot(f_w', 'r')
 title('f_w (sampled in blue)')
+xticks(ind_plot(5:5:end))
+xticklabels(dates_plot(5:5:end))
 counter = counter + 1;
 end
 
@@ -187,6 +204,8 @@ plot(stT(id_f_m, :)', 'b')
 hold on
 plot(f_m', 'r')
 title('f_m (sampled in blue)')
+xticks(ind_plot(5:5:end))
+xticklabels(dates_plot(5:5:end))
 counter = counter + 1;
 end
 
@@ -196,6 +215,8 @@ plot(stT(id_f_q, :)', 'b')
 hold on
 plot(f_q', 'r')
 title('f_q (sampled in blue)')
+xticks(ind_plot(5:5:end))
+xticklabels(dates_plot(5:5:end))
 end
 
 %-------------------------------------------------------------------------%
@@ -251,6 +272,7 @@ refline(1, 0)
 title('Omeg')
 ylabel('estimate')
 xlabel('actual')
+
 counter = counter + 1;
 
 if Nd > 0

@@ -1,4 +1,5 @@
 rm(list = ls())
+setwd("C:\Users\Philipp\Documents\GitHub\nowcasting-topics\model")
 #_____________________________________________________#
 #_This script creates a dataframe containing the dates
 #_from January 1st 1991 to December 31st 2018 along 

@@ -7,8 +7,10 @@ setwd("C:/Users/Philipp/Documents/GitHub/nowcasting-topics/model")
 #_week, day and weekday of said dates. Furthermore,
 #_it also calculates the indicator variables Xi_q, 
 #_Xi_m, Xi_w that indicate the start of a new quarter,
-#_month or week. These variables are used to generate
-#_artifical data from a daily factor model mixing all
+#_month or week. In addition, the weights for quarterly
+#_flow variables W_q_c and W_q_p are constructed. 
+#_These variables are used to generate
+#_artificial data from a daily factor model mixing all
 #_of the above frequencies. 
 #_____________________________________________________#
 

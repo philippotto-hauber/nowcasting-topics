@@ -91,7 +91,7 @@ for (y in years)
     if (y == years[length(years)] & q == quarters[length(quarters)]) # W_q_p = 0 => Not necessary but conceptually clearer!
     {
 
-      df_W_q <- rbind(df_W_qd, data.frame(year = y,
+      df_W_qd <- rbind(df_W_qd, data.frame(year = y,
                                          quarter = q,
                                          day = seq(1, k_t),
                                          W_qd_c = W_qd_c,
@@ -101,7 +101,7 @@ for (y in years)
 
     } else
     {
-      df_W_qd <- rbind(df_W_q, data.frame(year = y,
+      df_W_qd <- rbind(df_W_qd, data.frame(year = y,
                                          quarter = q,
                                          day = seq(1, k_t),
                                          W_dq_c = W_qd_c,
@@ -113,7 +113,7 @@ for (y in years)
 }
 
 # merge with df
-df <- left_join(df, df_W_q, by = c("year", "quarter", "day"))
+df <- left_join(df, df_W_qd, by = c("year", "quarter", "day"))
 
 #_____________________________________________________#
 #_dates for MATLAB plots

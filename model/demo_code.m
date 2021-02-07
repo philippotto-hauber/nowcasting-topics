@@ -20,22 +20,27 @@ clear; close all; clc;
 %-------------------------------------------------------------------------%
 
 % set-up
-Nd = 40; % # of daily series  
-Nw = 10; % # of weekly series
-Nm = 10; % # of monthly series
-Nq = 10; % # of quarterly series
+Nd = 10; % # of daily series  
+Nw = 0; % # of weekly series
+Nm = 0; % # of monthly series
+Nq = 4; % # of quarterly series
+Nq_flow = Nq / 2; % # of quarterly flow series
+Nq_stock = Nq - Nq_flow; % # of quarterly stock series
+ind_q_flow = [repelem(true, Nq_flow), repelem(false, Nq_stock)];
 Nr = 2; % # of factors
 Np = 3; % # of lags in factor VAR
 Np_eff = Np + 1; % # of lags of f in state vector (always needs to be one higher for covariance of factors in M-step!)
 
 
 % load dates corresponding to Jan 1st 1991-Dec 31 2018
-tmp = importdata('dates_Xi_19912018.csv');
+tmp = importdata('dates_Xi_W_19912018.csv');
 Nt = size(tmp.data, 1); % # of observations (daily frequency)
 offset_nonnumvars = size(tmp.textdata, 2) - size(tmp.data, 2); % number of non-numeric vars (these are ordered first!) 
 Xi_w =  tmp.data(:, find(contains(tmp.textdata(1,:), 'Xi_w')) - offset_nonnumvars); % equals 0 if start of new week
 Xi_m =  tmp.data(:, find(contains(tmp.textdata(1,:), 'Xi_m')) - offset_nonnumvars); % equals 0 if start of new month
 Xi_q =  tmp.data(:, find(contains(tmp.textdata(1,:), 'Xi_q')) - offset_nonnumvars); % equals 0 if start of new quarter
+W_qd_c =  tmp.data(:, find(contains(tmp.textdata(1,:), 'W_qd_c')) - offset_nonnumvars); % equals 0 if start of new week
+W_qd_p =  tmp.data(:, find(contains(tmp.textdata(1,:), 'W_qd_p')) - offset_nonnumvars); % equals 0 if start of new week
 ind_plot = tmp.data(:, find(contains(tmp.textdata(1,:), 'ind_plot')) - offset_nonnumvars);
 ind_plot = ind_plot(~isnan(ind_plot));
 dates_plot = tmp.data(:, find(contains(tmp.textdata(1,:), 'dates_plot')) - offset_nonnumvars);
@@ -65,20 +70,19 @@ F = NaN(Nr * Np, Nt); % companion form
 f_w = NaN(Nr, Nt);
 f_m = NaN(Nr, Nt);
 f_q = NaN(Nr, Nt);
-
-% indices for monthly and quarterly observations
-N_d_w = 5; % # of days per week => working days
-N_d_m = N_d_w * 4; % # of days per month
-N_d_q = N_d_m * 3; % # of days per quarter
+f_q_c = NaN(Nr, Nt); % current quarter
+f_q_p = NaN(Nr, Nt); % previous quarter
 
 % loop over t
 F(:, 1) = 0; % initialize f_0, f_-1, ..., f_-p+1
 for t = 1:Nt
     if t == 1
         F(1:Nr,t) = mvnrnd(zeros(Nr, 1), Omeg);
-        if Xi_w(t) == 0; f_w(:, t) = F(1:Nr, t); else;f_w(:, t) = F(1:Nr, t); end
-        if Xi_m(t) == 0; f_m(:, t) = F(1:Nr, t); else; f_m(:, t) = F(1:Nr, t); end
-        if Xi_q(t) == 0; f_q(:, t) = F(1:Nr, t); else; f_q(:, t) = F(1:Nr, t); end          
+        f_w(:, t) = F(1:Nr, t);
+        f_m(:, t) = F(1:Nr, t);
+        f_q(:, t) = F(1:Nr, t);
+        f_q_c(:, t) = F(1:Nr, t);
+        f_q_p(:,t) = zeros(Nr, 1); 
     else
         % daily factor 
         F(:,t) = [Phi; eye(Nr * (Np-1)) zeros(Nr * (Np-1), Nr)] * F(:, t-1) + [eye(Nr); zeros(Nr * (Np-1), Nr)] * mvnrnd(zeros(Nr, 1), Omeg)';
@@ -94,8 +98,17 @@ for t = 1:Nt
         y_m(:, t) = lam_m * f_m(:, t) + sqrt(sig2_m) .* randn(Nm, 1);
 
         % quarterly factor and data
-        if Xi_q(t) == 0; f_q(:, t) = F(1:Nr, t); else; f_q(:, t) = f_q(:, t-1) + F(1:Nr, t); end          
-        y_q(:, t) = lam_q * f_q(:, t) + sqrt(sig2_q) .* randn(Nq, 1);
+        if Xi_q(t) == 0 
+            f_q(:, t) = F(1:Nr, t); 
+            f_q_c(:, t) = f_q_p(:, t-1) + F(1:Nr, t);
+            f_q_p(:, t) = zeros(Nr, 1); 
+        else
+            f_q(:, t) = f_q(:, t-1) + F(1:Nr, t);
+            f_q_c(:, t) = f_q_c(:, t-1) + W_qd_c(t) * F(1:Nr, t);
+            f_q_p(:, t) = f_q_p(:, t-1) + W_qd_p(t) * F(1:Nr, t); 
+        end          
+        y_q(~ind_q_flow, t) = lam_q(~ind_q_flow, :) * f_q(:, t) + sqrt(sig2_q(~ind_q_flow)) .* randn(Nq_stock, 1);
+        y_q(ind_q_flow, t) = lam_q(ind_q_flow, :) * f_q_c(:, t) + sqrt(sig2_q(ind_q_flow)) .* randn(Nq_flow, 1);
     end    
 end
 
@@ -113,7 +126,7 @@ ind_m_o = ind_m_o(ind_m_o > 0);
 y_m_o = NaN(Nm, Nt);y_m_o(:, ind_m_o) = y_m(:, ind_m_o);
 ind_q_o = tmp(Xi_q==0) - 1;
 ind_q_o = ind_q_o(ind_q_o > 0);
-y_q_o = NaN(Nq, Nt);y_q_o(:, end:-N_d_q:1) = y_q(:, end:-N_d_q:1);
+y_q_o = NaN(Nq, Nt);y_q_o(:, ind_q_o) = y_q(:, ind_q_o);
 clearvars tmp ind_w_o ind_m_o ind_q_o
 
 
@@ -140,6 +153,23 @@ plot(y_q_o', '-o','Color', [0.4940, 0.1840, 0.5560]);
 xticks(ind_plot(5:5:end))
 xticklabels(dates_plot(5:5:end))
 title('Simulated observations')
+
+
+figure;
+y_q_flow = y_q(ind_q_flow, :);
+p1 = plot(y_q_flow(1, :)', '-', 'Color', [0, 0.4470, 0.7410, 0.7]); 
+hold on; 
+plot(y_q_flow(2:end, :)', '-', 'Color', [0, 0.4470, 0.7410, 0.7]); 
+y_q_stock = y_q(~ind_q_flow, :);
+p2 = plot(y_q_stock(1, :)', '-', 'Color', [0.8500, 0.3250, 0.0980, 0.7]);
+hold on
+plot(y_q_stock(2:end, :)', '-', 'Color', [0.8500, 0.3250, 0.0980, 0.7]);
+xticks(ind_plot(5:5:end))
+xticklabels(dates_plot(5:5:end))
+title('Quarterly series')
+legend([p1, p2], {'flows', 'stocks'})
+clearvars y_q_flow y_q_stock
+
 
 %-------------------------------------------------------------------------%
 % run Kalman smoother (E-step!)

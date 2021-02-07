@@ -27,8 +27,8 @@ Nq = 4; % # of quarterly series
 Nq_flow = Nq / 2; % # of quarterly flow series
 Nq_stock = Nq - Nq_flow; % # of quarterly stock series
 ind_q_flow = [repelem(true, Nq_flow), repelem(false, Nq_stock)];
-Nr = 2; % # of factors
-Np = 3; % # of lags in factor VAR
+Nr = 1; % # of factors
+Np = 1; % # of lags in factor VAR
 Np_eff = Np + 1; % # of lags of f in state vector (always needs to be one higher for covariance of factors in M-step!)
 
 
@@ -48,17 +48,36 @@ dates_plot = dates_plot(~isnan(dates_plot));
 clearvars tmp offset_nonnumvars 
 
 % params
-lam_d = [0.6 + 0.1 * randn(Nd, 1), -0.4 + 0.1 * randn(Nd, 1)]; 
-lam_w = [0.6 + 0.1 * randn(Nw, 1), -0.4 + 0.1 * randn(Nw, 1)]; 
-lam_m = [0.6 + 0.1 * randn(Nm, 1), -0.4 + 0.1 * randn(Nm, 1)];
-lam_q = [0.6 + 0.1 * randn(Nq, 1), -0.4 + 0.1 * randn(Nq, 1)];
+switch Nr
+    case 1
+        lam_d = 0.6 + 0.1 * randn(Nd, 1); 
+        lam_w = 0.6 + 0.1 * randn(Nw, 1); 
+        lam_m = 0.6 + 0.1 * randn(Nm, 1);
+        lam_q = 0.6 + 0.1 * randn(Nq, 1);
+    case 2
+        lam_d = [0.6 + 0.1 * randn(Nd, 1), -0.4 + 0.1 * randn(Nd, 1)]; 
+        lam_w = [0.6 + 0.1 * randn(Nw, 1), -0.4 + 0.1 * randn(Nw, 1)]; 
+        lam_m = [0.6 + 0.1 * randn(Nm, 1), -0.4 + 0.1 * randn(Nm, 1)];
+        lam_q = [0.6 + 0.1 * randn(Nq, 1), -0.4 + 0.1 * randn(Nq, 1)];
+    otherwise
+        error('Nr has to be smaller than or equal to 2!')
+end
 
 sig2_d = 0.2 + unifrnd(0.0, 0.2, Nd, 1);
 sig2_w = 0.2 + unifrnd(0.0, 0.2, Nw, 1);
 sig2_m = 0.2 + unifrnd(0.0, 0.2, Nm, 1);
 sig2_q = 0.2 + unifrnd(0.0, 0.2, Nq, 1);
 
-Phi = [0.3 * eye(Nr), -0.4 * eye(Nr), 0.1 * eye(Nr)];
+switch Np
+    case 1
+        Phi = 0.5 * eye(Nr);
+    case 2
+        Phi = [0.5 * eye(Nr), -0.2 * eye(Nr)];
+    case 3
+        Phi = [0.3 * eye(Nr), -0.4 * eye(Nr), 0.1 * eye(Nr)];
+    otherwise
+        error('Np has to smaller than or equal to 3!')
+end
 Omeg = diag(unifrnd(0.8,1.2, Nr, 1));
 
 % initialize mats for storage
@@ -190,6 +209,8 @@ params.sig2_q = sig2_q;
 params.Xi_w = Xi_w;
 params.Xi_m = Xi_m;
 params.Xi_q = Xi_q;
+params.W_qd_c = W_qd_c;
+params.W_qd_p = W_qd_p;
 params.Phi = Phi;
 params.Omeg = Omeg;
 

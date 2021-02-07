@@ -23,7 +23,7 @@ clear; close all; clc;
 Nd = 50; % # of daily series  
 Nw = 0; % # of weekly series
 Nm = 0; % # of monthly series
-Nq = 4; % # of quarterly series
+Nq = 2; % # of quarterly series
 Nq_flow = Nq / 2; % # of quarterly flow series
 Nq_stock = Nq - Nq_flow; % # of quarterly stock series
 ind_q_flow = [repelem(true, Nq_flow), repelem(false, Nq_stock)];

@@ -226,7 +226,7 @@ toc
 % plot actual and sampled states
 nrow_plot = double(Nd > 0) + double(Nw > 0) + double(Nm > 0) + double(Nq > 0);
 
-[id_f, id_f_lags, id_f_d, id_f_w, id_f_m, id_f_q] = f_id_fs(Nr, Np_eff, Nd, Nw, Nm, Nq); % get positions of factors in state vector
+[id_f, id_f_lags, id_f_d, id_f_w, id_f_m, id_f_q_flow, id_f_q_stock] = f_id_fs(Nr, Np_eff, Nd, Nw, Nm, Nq_flow, Nq_stock); % get positions of factors in state vector
 
 figure;
 counter = 1;
@@ -265,9 +265,9 @@ end
 
 if Nq > 0
 subplot(nrow_plot,1,counter)
-plot(stT(id_f_q, :)', 'b')
+plot([stT(id_f_q_flow, :); stT(id_f_q_stock, :)]', 'b')
 hold on
-plot(f_q', 'r')
+plot([f_q_c; f_q]', 'r')
 title('f_q (sampled in blue)')
 xticks(ind_plot(5:5:end))
 xticklabels(dates_plot(5:5:end))
@@ -278,7 +278,7 @@ end
 %-------------------------------------------------------------------------%
 
 % get positions of factors in state vector
-[id_f, id_f_lags, id_f_d, id_f_w, id_f_m, id_f_q] = f_id_fs(Nr, Np_eff, Nd, Nw, Nm, Nq);
+[id_f, id_f_lags, id_f_d, id_f_w, id_f_m, id_f_q_flow, id_f_q_stock] = f_id_fs(Nr, Np_eff, Nd, Nw, Nm, Nq_flow, Nq_stock);
 
 % lam_d and sig_d
 if Nd > 0
@@ -297,7 +297,16 @@ end
 
 % lam_q and sig_q
 if Nq > 0
-    [lam_q_hat, sig2_q_hat] = f_sample_lam_sig(y_q_o, stT(id_f_q, :), PtT(id_f_q, id_f_q, :), sig2_q);
+    if Nq_flow > 0         
+        [lam_q_flow_hat, sig2_q_flow_hat] = f_sample_lam_sig(y_q_o(ind_q_flow,:), stT(id_f_q_flow, :), PtT(id_f_q_flow, id_f_q_flow, :), sig2_q(ind_q_flow));
+    end
+    
+    if Nq_stock > 0         
+        [lam_q_stock_hat, sig2_q_stock_hat] = f_sample_lam_sig(y_q_o(~ind_q_flow,:), stT(id_f_q_stock, :), PtT(id_f_q_stock, id_f_q_stock, :), sig2_q(~ind_q_flow));
+    end
+    
+    lam_q_hat = [lam_q_flow_hat; lam_q_stock_hat];
+    sig2_q_hat = [sig2_q_flow_hat; sig2_q_stock_hat];
 end
 
 % Phi and Omeg

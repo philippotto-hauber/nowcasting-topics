@@ -72,7 +72,7 @@ quarters <- seq(1, 4)
 t_prev <- 0
 t <- 0
 k <- df_n_days_q$n_days_avg_q[1]
-df_W_dq <- data.frame()
+df_W_qd <- data.frame()
 for (y in years)
 {
   print(y)
@@ -105,7 +105,7 @@ for (y in years)
                                          quarter = q,
                                          day = seq(1, k_t),
                                          W_dq_c = W_qd_c,
-                                         W_dq_p = c(0, rev(W_qd_c[2:length(W_q_c)]))
+                                         W_dq_p = c(0, rev(W_qd_c[2:length(W_qd_c)]))
                                          )
                       )
     }

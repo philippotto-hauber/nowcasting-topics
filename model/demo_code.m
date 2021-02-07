@@ -76,7 +76,8 @@ f_q_p = NaN(Nr, Nt); % previous quarter
 % loop over t
 F(:, 1) = 0; % initialize f_0, f_-1, ..., f_-p+1
 for t = 1:Nt
-    if t == 1
+    % iterate factors forwars
+    if t == 1 % initialize model!
         F(1:Nr,t) = mvnrnd(zeros(Nr, 1), Omeg);
         f_w(:, t) = F(1:Nr, t);
         f_m(:, t) = F(1:Nr, t);
@@ -86,18 +87,14 @@ for t = 1:Nt
     else
         % daily factor 
         F(:,t) = [Phi; eye(Nr * (Np-1)) zeros(Nr * (Np-1), Nr)] * F(:, t-1) + [eye(Nr); zeros(Nr * (Np-1), Nr)] * mvnrnd(zeros(Nr, 1), Omeg)';
-        % daily data
-        y_d(:, t) = lam_d * F(1:Nr, t) + sqrt(sig2_d) .* randn(Nd, 1);
-
-        % weekly factor and data
+        
+        % weekly factor 
         if Xi_w(t) == 0; f_w(:, t) = F(1:Nr, t); else;f_w(:, t) = f_w(:, t-1) + F(1:Nr, t); end
-        y_w(:, t) = lam_w * f_w(:, t) + sqrt(sig2_w) .* randn(Nw, 1);
-
-        % monthly factor and data
+        
+        % monthly factor 
         if Xi_m(t) == 0; f_m(:, t) = F(1:Nr, t); else; f_m(:, t) = f_m(:, t-1) + F(1:Nr, t); end
-        y_m(:, t) = lam_m * f_m(:, t) + sqrt(sig2_m) .* randn(Nm, 1);
-
-        % quarterly factor and data
+        
+        % quarterly factor 
         if Xi_q(t) == 0 
             f_q(:, t) = F(1:Nr, t); 
             f_q_c(:, t) = f_q_p(:, t-1) + F(1:Nr, t);
@@ -107,9 +104,14 @@ for t = 1:Nt
             f_q_c(:, t) = f_q_c(:, t-1) + W_qd_c(t) * F(1:Nr, t);
             f_q_p(:, t) = f_q_p(:, t-1) + W_qd_p(t) * F(1:Nr, t); 
         end          
-        y_q(~ind_q_flow, t) = lam_q(~ind_q_flow, :) * f_q(:, t) + sqrt(sig2_q(~ind_q_flow)) .* randn(Nq_stock, 1);
-        y_q(ind_q_flow, t) = lam_q(ind_q_flow, :) * f_q_c(:, t) + sqrt(sig2_q(ind_q_flow)) .* randn(Nq_flow, 1);
-    end    
+    end     
+    
+    % generate observables in t
+    y_d(:, t) = lam_d * F(1:Nr, t) + sqrt(sig2_d) .* randn(Nd, 1);
+    y_w(:, t) = lam_w * f_w(:, t) + sqrt(sig2_w) .* randn(Nw, 1);
+    y_m(:, t) = lam_m * f_m(:, t) + sqrt(sig2_m) .* randn(Nm, 1);
+    y_q(~ind_q_flow, t) = lam_q(~ind_q_flow, :) * f_q(:, t) + sqrt(sig2_q(~ind_q_flow)) .* randn(Nq_stock, 1);
+    y_q(ind_q_flow, t) = lam_q(ind_q_flow, :) * f_q_c(:, t) + sqrt(sig2_q(ind_q_flow)) .* randn(Nq_flow, 1);   
 end
 
 % extract factor from companion form representation

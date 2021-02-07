@@ -20,7 +20,7 @@ clear; close all; clc;
 %-------------------------------------------------------------------------%
 
 % set-up
-Nd = 10; % # of daily series  
+Nd = 50; % # of daily series  
 Nw = 0; % # of weekly series
 Nm = 0; % # of monthly series
 Nq = 4; % # of quarterly series
@@ -332,8 +332,10 @@ counter = counter + 1;
 if Nd > 0
     subplot(nrow_plot,2,counter)
     scatter(lam_d(:, 1), lam_d_hat(:, 1), 'b')
-    hold on;
-    scatter(lam_d(:, 2), lam_d_hat(:, 2), 'r')
+    if Nr == 2
+        hold on;
+        scatter(lam_d(:, 2), lam_d_hat(:, 2), 'r')
+    end
     ylim([-1 1])
     xlim([-1 1])
     refline(1, 0)
@@ -403,9 +405,13 @@ end
 
 if Nq > 0
     subplot(nrow_plot,2,counter)
-    scatter(lam_q(:, 1), lam_q_hat(:, 1), 'b')
-    hold on;
-    scatter(lam_q(:, 2), lam_q_hat(:, 2), 'r')
+    scatter(lam_q(ind_q_flow, 1), lam_q_hat(ind_q_flow, 1), 'bx')
+    hold on
+    scatter(lam_q(~ind_q_flow, 1), lam_q_hat(~ind_q_flow, 1), 'bo')
+    if Nr == 2
+        scatter(lam_q(ind_q_flow, 2), lam_q_hat(ind_q_flow, 2), 'rx')
+        scatter(lam_q(~ind_q_flow, 2), lam_q_hat(~ind_q_flow, 2), 'ro')
+    end
     ylim([-1 1])
     xlim([-1 1])
     refline(1, 0)
@@ -415,7 +421,9 @@ if Nq > 0
     counter = counter + 1;
 
     subplot(nrow_plot,2,counter)
-    scatter(sig2_q, sig2_q_hat)
+    scatter(sig2_q(ind_q_flow), sig2_q_hat(ind_q_flow), 'bx')
+    hold on
+    scatter(sig2_q(~ind_q_flow), sig2_q_hat(~ind_q_flow), 'bo')
     ylim([0 1])
     xlim([0 1])
     refline(1, 0)

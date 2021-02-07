@@ -104,8 +104,8 @@ for (y in years)
       df_W_qd <- rbind(df_W_qd, data.frame(year = y,
                                          quarter = q,
                                          day = seq(1, k_t),
-                                         W_dq_c = W_qd_c,
-                                         W_dq_p = c(0, rev(W_qd_c[2:length(W_qd_c)]))
+                                         W_qd_c = W_qd_c,
+                                         W_qd_p = c(0, rev(W_qd_c[2:length(W_qd_c)]))
                                          )
                       )
     }

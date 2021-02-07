@@ -67,7 +67,7 @@ df %>%
 df_n_days_q$n_days_avg_q = floor(mean(df_n_days_q$n_days_q))
 
 # loop over quarters to construct W_q_c and W_q_p
-years <- seq(1991, 1991)
+years <- seq(1991, 2018)
 quarters <- seq(1, 4)
 t_prev <- 0
 t <- 0
@@ -112,8 +112,8 @@ for (y in years)
   }
 }
 
-# merge with df
-df <- left_join(df, df_W_qd, by = c("year", "quarter", "day"))
+# cbind to df
+df <- cbind(df, select(df_W_qd, W_qd_c, W_qd_p))
 
 #_____________________________________________________#
 #_dates for MATLAB plots

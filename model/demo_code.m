@@ -181,7 +181,8 @@ clearvars y_q_flow y_q_stock
 params.lam_d = lam_d;
 params.lam_w = lam_w;
 params.lam_m = lam_m;
-params.lam_q = lam_q;
+params.lam_q_flow = lam_q(ind_q_flow, :);
+params.lam_q_stock = lam_q(~ind_q_flow, :);
 params.sig2_d = sig2_d;
 params.sig2_w = sig2_w;
 params.sig2_m = sig2_m;

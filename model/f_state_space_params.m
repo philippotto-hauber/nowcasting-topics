@@ -26,7 +26,10 @@ for t = 1:Nt
     T0 = eye(Ns);
     T0tmp  = []; 
     if Nw > 0 && Nd > 0 
-        T0tmp = -eye(Nr);
+        T0tmp = [T0tmp; -eye(Nr)];
+    end
+    if Nm > 0 && (Nw > 0 || Nd > 0)
+        T0tmp = [T0tmp; -eye(Nm)];
     end
     if Nq_flow > 0
         T0tmp = [T0tmp; -params.W_qd_c(t) * eye(Nr); -params.W_qd_p(t) * eye(Nr)];

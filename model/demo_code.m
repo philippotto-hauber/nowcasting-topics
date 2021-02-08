@@ -20,22 +20,33 @@ clear; close all; clc;
 %-------------------------------------------------------------------------%
 
 % set-up
-Nd = 40; % # of daily series  
+Nd = 20; % # of daily series  
 Nw = 10; % # of weekly series
-Nm = 10; % # of monthly series
-Nq = 10; % # of quarterly series
-Nr = 2; % # of factors
-Np = 3; % # of lags in factor VAR
+Nm = 6; % # of monthly series
+Nm_flow = Nm / 2; % # of quarterly flow series
+Nm_stock = Nm - Nm_flow; % # of quarterly stock series
+ind_m_flow = [repelem(true, Nm_flow), repelem(false, Nm_stock)];
+Nq = 6; % # of quarterly series
+Nq_flow = Nq / 2; % # of quarterly flow series
+Nq_stock = Nq - Nq_flow; % # of quarterly stock series
+ind_q_flow = [repelem(true, Nq_flow), repelem(false, Nq_stock)];
+Nr = 1; % # of factors
+Np = 1; % # of lags in factor VAR
 Np_eff = Np + 1; % # of lags of f in state vector (always needs to be one higher for covariance of factors in M-step!)
 
 
-% load dates corresponding to Jan 1st 1991-Dec 31 2018
-tmp = importdata('dates_Xi_19912018.csv');
+% load dates corresponding to Jan 1st 1991-Dec 31 2018 and auxiliary vars
+% like Xi_w/m/q and weights for flow vars W_md_c, ...
+tmp = importdata('dates_Xi_W_19912018.csv');
 Nt = size(tmp.data, 1); % # of observations (daily frequency)
 offset_nonnumvars = size(tmp.textdata, 2) - size(tmp.data, 2); % number of non-numeric vars (these are ordered first!) 
 Xi_w =  tmp.data(:, find(contains(tmp.textdata(1,:), 'Xi_w')) - offset_nonnumvars); % equals 0 if start of new week
 Xi_m =  tmp.data(:, find(contains(tmp.textdata(1,:), 'Xi_m')) - offset_nonnumvars); % equals 0 if start of new month
+W_md_c =  tmp.data(:, find(contains(tmp.textdata(1,:), 'W_md_c')) - offset_nonnumvars); 
+W_md_p =  tmp.data(:, find(contains(tmp.textdata(1,:), 'W_md_p')) - offset_nonnumvars); 
 Xi_q =  tmp.data(:, find(contains(tmp.textdata(1,:), 'Xi_q')) - offset_nonnumvars); % equals 0 if start of new quarter
+W_qd_c =  tmp.data(:, find(contains(tmp.textdata(1,:), 'W_qd_c')) - offset_nonnumvars); 
+W_qd_p =  tmp.data(:, find(contains(tmp.textdata(1,:), 'W_qd_p')) - offset_nonnumvars);
 ind_plot = tmp.data(:, find(contains(tmp.textdata(1,:), 'ind_plot')) - offset_nonnumvars);
 ind_plot = ind_plot(~isnan(ind_plot));
 dates_plot = tmp.data(:, find(contains(tmp.textdata(1,:), 'dates_plot')) - offset_nonnumvars);
@@ -43,17 +54,36 @@ dates_plot = dates_plot(~isnan(dates_plot));
 clearvars tmp offset_nonnumvars 
 
 % params
-lam_d = [0.6 + 0.1 * randn(Nd, 1), -0.4 + 0.1 * randn(Nd, 1)]; 
-lam_w = [0.6 + 0.1 * randn(Nw, 1), -0.4 + 0.1 * randn(Nw, 1)]; 
-lam_m = [0.6 + 0.1 * randn(Nm, 1), -0.4 + 0.1 * randn(Nm, 1)];
-lam_q = [0.6 + 0.1 * randn(Nq, 1), -0.4 + 0.1 * randn(Nq, 1)];
+switch Nr
+    case 1
+        lam_d = 0.6 + 0.1 * randn(Nd, 1); 
+        lam_w = 0.6 + 0.1 * randn(Nw, 1); 
+        lam_m = 0.6 + 0.1 * randn(Nm, 1);
+        lam_q = 0.6 + 0.1 * randn(Nq, 1);
+    case 2
+        lam_d = [0.6 + 0.1 * randn(Nd, 1), -0.4 + 0.1 * randn(Nd, 1)]; 
+        lam_w = [0.6 + 0.1 * randn(Nw, 1), -0.4 + 0.1 * randn(Nw, 1)]; 
+        lam_m = [0.6 + 0.1 * randn(Nm, 1), -0.4 + 0.1 * randn(Nm, 1)];
+        lam_q = [0.6 + 0.1 * randn(Nq, 1), -0.4 + 0.1 * randn(Nq, 1)];
+    otherwise
+        error('Nr has to be smaller than or equal to 2!')
+end
 
 sig2_d = 0.2 + unifrnd(0.0, 0.2, Nd, 1);
 sig2_w = 0.2 + unifrnd(0.0, 0.2, Nw, 1);
 sig2_m = 0.2 + unifrnd(0.0, 0.2, Nm, 1);
 sig2_q = 0.2 + unifrnd(0.0, 0.2, Nq, 1);
 
-Phi = [0.3 * eye(Nr), -0.4 * eye(Nr), 0.1 * eye(Nr)];
+switch Np
+    case 1
+        Phi = 0.5 * eye(Nr);
+    case 2
+        Phi = [0.5 * eye(Nr), -0.2 * eye(Nr)];
+    case 3
+        Phi = [0.3 * eye(Nr), -0.4 * eye(Nr), 0.1 * eye(Nr)];
+    otherwise
+        error('Np has to smaller than or equal to 3!')
+end
 Omeg = diag(unifrnd(0.8,1.2, Nr, 1));
 
 % initialize mats for storage
@@ -64,39 +94,62 @@ y_q = NaN(Nq, Nt);
 F = NaN(Nr * Np, Nt); % companion form
 f_w = NaN(Nr, Nt);
 f_m = NaN(Nr, Nt);
+f_m_c = NaN(Nr, Nt); % current month
+f_m_p = NaN(Nr, Nt); % previous month
 f_q = NaN(Nr, Nt);
-
-% indices for monthly and quarterly observations
-N_d_w = 5; % # of days per week => working days
-N_d_m = N_d_w * 4; % # of days per month
-N_d_q = N_d_m * 3; % # of days per quarter
+f_q_c = NaN(Nr, Nt); % current quarter
+f_q_p = NaN(Nr, Nt); % previous quarter
 
 % loop over t
 F(:, 1) = 0; % initialize f_0, f_-1, ..., f_-p+1
 for t = 1:Nt
-    if t == 1
+    % iterate factors forwars
+    if t == 1 % initialize model!
         F(1:Nr,t) = mvnrnd(zeros(Nr, 1), Omeg);
-        if Xi_w(t) == 0; f_w(:, t) = F(1:Nr, t); else;f_w(:, t) = F(1:Nr, t); end
-        if Xi_m(t) == 0; f_m(:, t) = F(1:Nr, t); else; f_m(:, t) = F(1:Nr, t); end
-        if Xi_q(t) == 0; f_q(:, t) = F(1:Nr, t); else; f_q(:, t) = F(1:Nr, t); end          
+        f_w(:, t) = F(1:Nr, t);
+        f_m(:, t) = F(1:Nr, t);
+        f_m_c(:, t) = F(1:Nr, t);
+        f_m_p(:,t) = zeros(Nr, 1); 
+        f_q(:, t) = F(1:Nr, t);
+        f_q_c(:, t) = F(1:Nr, t);
+        f_q_p(:,t) = zeros(Nr, 1); 
     else
         % daily factor 
         F(:,t) = [Phi; eye(Nr * (Np-1)) zeros(Nr * (Np-1), Nr)] * F(:, t-1) + [eye(Nr); zeros(Nr * (Np-1), Nr)] * mvnrnd(zeros(Nr, 1), Omeg)';
-        % daily data
-        y_d(:, t) = lam_d * F(1:Nr, t) + sqrt(sig2_d) .* randn(Nd, 1);
-
-        % weekly factor and data
+        
+        % weekly factor 
         if Xi_w(t) == 0; f_w(:, t) = F(1:Nr, t); else;f_w(:, t) = f_w(:, t-1) + F(1:Nr, t); end
-        y_w(:, t) = lam_w * f_w(:, t) + sqrt(sig2_w) .* randn(Nw, 1);
-
-        % monthly factor and data
-        if Xi_m(t) == 0; f_m(:, t) = F(1:Nr, t); else; f_m(:, t) = f_m(:, t-1) + F(1:Nr, t); end
-        y_m(:, t) = lam_m * f_m(:, t) + sqrt(sig2_m) .* randn(Nm, 1);
-
-        % quarterly factor and data
-        if Xi_q(t) == 0; f_q(:, t) = F(1:Nr, t); else; f_q(:, t) = f_q(:, t-1) + F(1:Nr, t); end          
-        y_q(:, t) = lam_q * f_q(:, t) + sqrt(sig2_q) .* randn(Nq, 1);
-    end    
+        
+        % monthly factor 
+        if Xi_m(t) == 0
+            f_m(:, t) = F(1:Nr, t);
+            f_m_c(:, t) = f_m_p(:, t-1) + F(1:Nr, t);
+            f_m_p(:, t) = zeros(Nr, 1); 
+        else
+            f_m(:, t) = f_m(:, t-1) + F(1:Nr, t);
+            f_m_c(:, t) = f_m_c(:, t-1) + W_md_c(t) * F(1:Nr, t);
+            f_m_p(:, t) = f_m_p(:, t-1) + W_md_p(t) * F(1:Nr, t); 
+        end
+        
+        % quarterly factor 
+        if Xi_q(t) == 0 
+            f_q(:, t) = F(1:Nr, t); 
+            f_q_c(:, t) = f_q_p(:, t-1) + F(1:Nr, t);
+            f_q_p(:, t) = zeros(Nr, 1); 
+        else
+            f_q(:, t) = f_q(:, t-1) + F(1:Nr, t);
+            f_q_c(:, t) = f_q_c(:, t-1) + W_qd_c(t) * F(1:Nr, t);
+            f_q_p(:, t) = f_q_p(:, t-1) + W_qd_p(t) * F(1:Nr, t); 
+        end          
+    end     
+    
+    % generate observables in t
+    y_d(:, t) = lam_d * F(1:Nr, t) + sqrt(sig2_d) .* randn(Nd, 1);
+    y_w(:, t) = lam_w * f_w(:, t) + sqrt(sig2_w) .* randn(Nw, 1);
+    y_m(~ind_m_flow, t) = lam_m(~ind_m_flow, :) * f_m(:, t) + sqrt(sig2_m(~ind_m_flow)) .* randn(Nm_stock, 1);
+    y_m(ind_m_flow, t) = lam_m(ind_m_flow, :) * f_m_c(:, t) + sqrt(sig2_m(ind_m_flow)) .* randn(Nm_flow, 1);
+    y_q(~ind_q_flow, t) = lam_q(~ind_q_flow, :) * f_q(:, t) + sqrt(sig2_q(~ind_q_flow)) .* randn(Nq_stock, 1);
+    y_q(ind_q_flow, t) = lam_q(ind_q_flow, :) * f_q_c(:, t) + sqrt(sig2_q(ind_q_flow)) .* randn(Nq_flow, 1);   
 end
 
 % extract factor from companion form representation
@@ -113,7 +166,7 @@ ind_m_o = ind_m_o(ind_m_o > 0);
 y_m_o = NaN(Nm, Nt);y_m_o(:, ind_m_o) = y_m(:, ind_m_o);
 ind_q_o = tmp(Xi_q==0) - 1;
 ind_q_o = ind_q_o(ind_q_o > 0);
-y_q_o = NaN(Nq, Nt);y_q_o(:, end:-N_d_q:1) = y_q(:, end:-N_d_q:1);
+y_q_o = NaN(Nq, Nt);y_q_o(:, ind_q_o) = y_q(:, ind_q_o);
 clearvars tmp ind_w_o ind_m_o ind_q_o
 
 
@@ -141,6 +194,37 @@ xticks(ind_plot(5:5:end))
 xticklabels(dates_plot(5:5:end))
 title('Simulated observations')
 
+figure;
+y_m_flow = y_m(ind_m_flow, :);
+p1 = plot(y_m_flow(1, :)', '-', 'Color', [0, 0.4470, 0.7410, 0.7]); 
+hold on; 
+plot(y_m_flow(2:end, :)', '-', 'Color', [0, 0.4470, 0.7410, 0.7]); 
+y_m_stock = y_m(~ind_m_flow, :);
+p2 = plot(y_m_stock(1, :)', '-', 'Color', [0.8500, 0.3250, 0.0980, 0.7]);
+hold on
+plot(y_m_stock(2:end, :)', '-', 'Color', [0.8500, 0.3250, 0.0980, 0.7]);
+xticks(ind_plot(5:5:end))
+xticklabels(dates_plot(5:5:end))
+title('Monthlly series')
+legend([p1, p2], {'flows', 'stocks'})
+clearvars y_m_flow y_m_stock
+
+figure;
+y_q_flow = y_q(ind_q_flow, :);
+p1 = plot(y_q_flow(1, :)', '-', 'Color', [0, 0.4470, 0.7410, 0.7]); 
+hold on; 
+plot(y_q_flow(2:end, :)', '-', 'Color', [0, 0.4470, 0.7410, 0.7]); 
+y_q_stock = y_q(~ind_q_flow, :);
+p2 = plot(y_q_stock(1, :)', '-', 'Color', [0.8500, 0.3250, 0.0980, 0.7]);
+hold on
+plot(y_q_stock(2:end, :)', '-', 'Color', [0.8500, 0.3250, 0.0980, 0.7]);
+xticks(ind_plot(5:5:end))
+xticklabels(dates_plot(5:5:end))
+title('Quarterly series')
+legend([p1, p2], {'flows', 'stocks'})
+clearvars y_q_flow y_q_stock
+
+
 %-------------------------------------------------------------------------%
 % run Kalman smoother (E-step!)
 %-------------------------------------------------------------------------%
@@ -148,15 +232,21 @@ title('Simulated observations')
 % collect parameters in structure
 params.lam_d = lam_d;
 params.lam_w = lam_w;
-params.lam_m = lam_m;
-params.lam_q = lam_q;
+params.lam_m_flow = lam_m(ind_m_flow, :);
+params.lam_m_stock = lam_m(~ind_m_flow, :);
+params.lam_q_flow = lam_q(ind_q_flow, :);
+params.lam_q_stock = lam_q(~ind_q_flow, :);
 params.sig2_d = sig2_d;
 params.sig2_w = sig2_w;
 params.sig2_m = sig2_m;
 params.sig2_q = sig2_q;
 params.Xi_w = Xi_w;
 params.Xi_m = Xi_m;
+params.W_md_c = W_md_c;
+params.W_md_p = W_md_p;
 params.Xi_q = Xi_q;
+params.W_qd_c = W_qd_c;
+params.W_qd_p = W_qd_p;
 params.Phi = Phi;
 params.Omeg = Omeg;
 
@@ -172,7 +262,7 @@ toc
 % plot actual and sampled states
 nrow_plot = double(Nd > 0) + double(Nw > 0) + double(Nm > 0) + double(Nq > 0);
 
-[id_f, id_f_lags, id_f_d, id_f_w, id_f_m, id_f_q] = f_id_fs(Nr, Np_eff, Nd, Nw, Nm, Nq); % get positions of factors in state vector
+[id_f, id_f_lags, id_f_d, id_f_w, id_f_m_flow, id_f_m_stock, id_f_q_flow, id_f_q_stock] = f_id_fs(Nr, Np_eff, Nd, Nw, Nm_flow, Nm_stock, Nq_flow, Nq_stock); % get positions of factors in state vector
 
 figure;
 counter = 1;
@@ -200,9 +290,9 @@ end
 
 if Nm > 0
 subplot(nrow_plot,1,counter)
-plot(stT(id_f_m, :)', 'b')
+plot([stT(id_f_m_flow, :); stT(id_f_m_stock, :)]', 'b')
 hold on
-plot(f_m', 'r')
+plot([f_m_c; f_m]', 'r')
 title('f_m (sampled in blue)')
 xticks(ind_plot(5:5:end))
 xticklabels(dates_plot(5:5:end))
@@ -211,9 +301,9 @@ end
 
 if Nq > 0
 subplot(nrow_plot,1,counter)
-plot(stT(id_f_q, :)', 'b')
+plot([stT(id_f_q_flow, :); stT(id_f_q_stock, :)]', 'b')
 hold on
-plot(f_q', 'r')
+plot([f_q_c; f_q]', 'r')
 title('f_q (sampled in blue)')
 xticks(ind_plot(5:5:end))
 xticklabels(dates_plot(5:5:end))
@@ -224,7 +314,7 @@ end
 %-------------------------------------------------------------------------%
 
 % get positions of factors in state vector
-[id_f, id_f_lags, id_f_d, id_f_w, id_f_m, id_f_q] = f_id_fs(Nr, Np_eff, Nd, Nw, Nm, Nq);
+[id_f, id_f_lags, id_f_d, id_f_w, id_f_m_flow, id_f_m_stock, id_f_q_flow, id_f_q_stock] = f_id_fs(Nr, Np_eff, Nd, Nw, Nm_flow, Nm_stock, Nq_flow, Nq_stock);
 
 % lam_d and sig_d
 if Nd > 0
@@ -238,12 +328,28 @@ end
 
 % lam_m and sig2_m
 if Nm > 0
-    [lam_m_hat, sig2_m_hat] = f_sample_lam_sig(y_m_o, stT(id_f_m, :), PtT(id_f_m, id_f_m, :), sig2_m);
+    if Nm_flow > 0
+        [lam_m_flow_hat, sig2_m_flow_hat] = f_sample_lam_sig(y_m_o(ind_m_flow,:), stT(id_f_m_flow, :), PtT(id_f_m_flow, id_f_m_flow, :), sig2_m(ind_m_flow));
+    end
+    if Nm_stock > 0
+        [lam_m_stock_hat, sig2_m_stock_hat] = f_sample_lam_sig(y_m_o(~ind_m_flow,:), stT(id_f_m_stock, :), PtT(id_f_m_stock, id_f_m_stock, :), sig2_m(~ind_m_flow));
+    end
+    lam_m_hat = [lam_m_flow_hat; lam_m_stock_hat];
+    sig2_m_hat = [sig2_m_flow_hat; sig2_m_stock_hat];
 end
 
 % lam_q and sig_q
 if Nq > 0
-    [lam_q_hat, sig2_q_hat] = f_sample_lam_sig(y_q_o, stT(id_f_q, :), PtT(id_f_q, id_f_q, :), sig2_q);
+    if Nq_flow > 0         
+        [lam_q_flow_hat, sig2_q_flow_hat] = f_sample_lam_sig(y_q_o(ind_q_flow,:), stT(id_f_q_flow, :), PtT(id_f_q_flow, id_f_q_flow, :), sig2_q(ind_q_flow));
+    end
+    
+    if Nq_stock > 0         
+        [lam_q_stock_hat, sig2_q_stock_hat] = f_sample_lam_sig(y_q_o(~ind_q_flow,:), stT(id_f_q_stock, :), PtT(id_f_q_stock, id_f_q_stock, :), sig2_q(~ind_q_flow));
+    end
+    
+    lam_q_hat = [lam_q_flow_hat; lam_q_stock_hat];
+    sig2_q_hat = [sig2_q_flow_hat; sig2_q_stock_hat];
 end
 
 % Phi and Omeg
@@ -278,10 +384,12 @@ counter = counter + 1;
 if Nd > 0
     subplot(nrow_plot,2,counter)
     scatter(lam_d(:, 1), lam_d_hat(:, 1), 'b')
-    hold on;
-    scatter(lam_d(:, 2), lam_d_hat(:, 2), 'r')
-    ylim([-1 1])
-    xlim([-1 1])
+    if Nr == 2
+        hold on;
+        scatter(lam_d(:, 2), lam_d_hat(:, 2), 'r')
+    end
+    ylim([-1.5 1.5])
+    xlim([-1.5 1.5])
     refline(1, 0)
     title('lam_d')
     ylabel('estimate')
@@ -302,10 +410,12 @@ end
 if Nw > 0
     subplot(nrow_plot,2,counter)
     scatter(lam_w(:, 1), lam_w_hat(:, 1), 'b')
-    hold on;
-    scatter(lam_w(:, 2), lam_w_hat(:, 2), 'r')
-    ylim([-1 1])
-    xlim([-1 1])
+    if Nr == 2
+        hold on;
+        scatter(lam_w(:, 2), lam_w_hat(:, 2), 'r')
+    end
+    ylim([-1.5 1.5])
+    xlim([-1.5 1.5])
     refline(1, 0)
     title('lam_w')
     ylabel('estimate')
@@ -325,11 +435,15 @@ end
 
 if Nm > 0
     subplot(nrow_plot,2,counter)
-    scatter(lam_m(:, 1), lam_m_hat(:, 1), 'b')
-    hold on;
-    scatter(lam_m(:, 2), lam_m_hat(:, 2), 'r')
-    ylim([-1 1])
-    xlim([-1 1])
+    scatter(lam_m(ind_m_flow, 1), lam_m_hat(ind_m_flow, 1), 'bx')
+    hold on
+    scatter(lam_m(~ind_m_flow, 1), lam_m_hat(~ind_m_flow, 1), 'bo')
+    if Nr == 2
+        scatter(lam_m(ind_m_flow, 2), lam_m_hat(ind_m_flow, 2), 'rx')
+        scatter(lam_m(~ind_m_flow, 2), lam_m_hat(~ind_m_flow, 2), 'ro')
+    end
+    ylim([-1.5 1.5])
+    xlim([-1.5 1.5])
     refline(1, 0)
     title('lam_m')
     ylabel('estimate')
@@ -337,7 +451,9 @@ if Nm > 0
     counter = counter + 1;
 
     subplot(nrow_plot,2,counter)
-    scatter(sig2_m, sig2_m_hat)
+    scatter(sig2_m(ind_m_flow), sig2_m_hat(ind_m_flow), 'bx')
+    hold on
+    scatter(sig2_m(~ind_m_flow), sig2_m_hat(~ind_m_flow), 'bo')
     ylim([0 1])
     xlim([0 1])
     refline(1, 0)
@@ -349,11 +465,15 @@ end
 
 if Nq > 0
     subplot(nrow_plot,2,counter)
-    scatter(lam_q(:, 1), lam_q_hat(:, 1), 'b')
-    hold on;
-    scatter(lam_q(:, 2), lam_q_hat(:, 2), 'r')
-    ylim([-1 1])
-    xlim([-1 1])
+    scatter(lam_q(ind_q_flow, 1), lam_q_hat(ind_q_flow, 1), 'bx')
+    hold on
+    scatter(lam_q(~ind_q_flow, 1), lam_q_hat(~ind_q_flow, 1), 'bo')
+    if Nr == 2
+        scatter(lam_q(ind_q_flow, 2), lam_q_hat(ind_q_flow, 2), 'rx')
+        scatter(lam_q(~ind_q_flow, 2), lam_q_hat(~ind_q_flow, 2), 'ro')
+    end
+    ylim([-1.5 1.5])
+    xlim([-1.5 1.5])
     refline(1, 0)
     title('lam_q')
     ylabel('estimate')
@@ -361,7 +481,9 @@ if Nq > 0
     counter = counter + 1;
 
     subplot(nrow_plot,2,counter)
-    scatter(sig2_q, sig2_q_hat)
+    scatter(sig2_q(ind_q_flow), sig2_q_hat(ind_q_flow), 'bx')
+    hold on
+    scatter(sig2_q(~ind_q_flow), sig2_q_hat(~ind_q_flow), 'bo')
     ylim([0 1])
     xlim([0 1])
     refline(1, 0)

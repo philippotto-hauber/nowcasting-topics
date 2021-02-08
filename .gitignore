@@ -6,3 +6,6 @@
 
 # ignore .Rhistory
 .Rhistory
+
+# ignore asv files
+*.asv

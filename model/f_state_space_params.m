@@ -24,8 +24,18 @@ R = NaN(Ns, Ns, Nt);
 for t = 1:Nt
     % T0
     T0 = eye(Ns);
-    if Nq_flow > 0; T0(Nr*Np_eff+1:(Np_eff+2)*Nr, 1:Nr) = [-params.W_qd_c(t) * eye(Nr); -params.W_qd_p(t) * eye(Nr)];end
-    if Nq_stock > 0; T0((Np_eff+2)*Nr+1:(Np_eff+3)*Nr, 1:Nr) = -eye(Nr);end
+    T0tmp  = []; 
+    if Nw > 0 && Nd > 0 
+        T0tmp = -eye(Nr);
+    end
+    if Nq_flow > 0
+        T0tmp = [T0tmp; -params.W_qd_c(t) * eye(Nr); -params.W_qd_p(t) * eye(Nr)];
+    end
+    if Nq_stock > 0
+        T0tmp = [T0tmp; -eye(Nr)];
+    end
+    
+    T0(Nr*Np_eff+1:end, 1:Nr) = T0tmp; 
     iT0 = T0 \ eye(Ns);
     
     % R

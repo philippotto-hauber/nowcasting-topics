@@ -19,10 +19,6 @@ if Nq_flow > 0 && (Nm > 0 || Nw > 0 || Nd > 0); Ns = Ns+2*Nr;end % two cumulator
 if Nq_stock > 0 && (Nm > 0 || Nw > 0 || Nd > 0); Ns = Ns+Nr;end % 1 cumulator  for stock
 
 % T, R => both time-varying
-T0 = eye(Ns);
-T0(Nr*Np_eff+1:Ns,1:Nr) = repmat(-eye(Nr), (Ns - Nr*Np_eff)/Nr, 1);
-iT0 = T0 \ eye(Ns); 
-
 T = NaN(Ns, Ns, Nt);
 R = NaN(Ns, Ns, Nt);
 for t = 1:Nt

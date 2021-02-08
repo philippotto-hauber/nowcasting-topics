@@ -18,18 +18,24 @@ if Nm > 0 && (Nw > 0 || Nd > 0) ; Ns = Ns+Nr;end
 if Nq_flow > 0 && (Nm > 0 || Nw > 0 || Nd > 0); Ns = Ns+2*Nr;end % two cumulators for flow  
 if Nq_stock > 0 && (Nm > 0 || Nw > 0 || Nd > 0); Ns = Ns+Nr;end % 1 cumulator  for stock
 
-% T, => time-varying
+% T, R => both time-varying
 T0 = eye(Ns);
 T0(Nr*Np_eff+1:Ns,1:Nr) = repmat(-eye(Nr), (Ns - Nr*Np_eff)/Nr, 1);
 iT0 = T0 \ eye(Ns); 
 
 T = NaN(Ns, Ns, Nt);
+R = NaN(Ns, Ns, Nt);
 for t = 1:Nt
+    % T0
     T0 = eye(Ns);
     if Nq_flow > 0; T0(Nr*Np_eff+1:(Np_eff+2)*Nr, 1:Nr) = [-params.W_qd_c(t) * eye(Nr); -params.W_qd_p(t) * eye(Nr)];end
     if Nq_stock > 0; T0((Np_eff+2)*Nr+1:(Np_eff+3)*Nr, 1:Nr) = -eye(Nr);end
     iT0 = T0 \ eye(Ns);
-        
+    
+    % R
+    R(:, :, t) = iT0; 
+    
+    % T
     Ttmp = [params.Phi zeros(Nr, Ns-size(params.Phi, 2));
             eye(Nr * (Np_eff-1)) zeros(Nr * (Np_eff-1), Ns - Nr * (Np_eff-1))];
     if Nw > 0 && Nd > 0 % if there are weekly series and its not the highest frequency. Otherwise its dynamics are governed by phi_f!
@@ -57,10 +63,9 @@ for t = 1:Nt
     T(:, :, t) = iT0 * Ttmp;
 end
 
-% Q & R 
+% Q  
 Q = zeros(Ns);
 Q(1:Nr, 1:Nr) = params.Omeg; 
-R = iT0; 
 
 % Z 
 Z_d = []; if Nd > 0; Z_d = [params.lam_d; zeros(Nw+Nm+Nq, Nr)]; end

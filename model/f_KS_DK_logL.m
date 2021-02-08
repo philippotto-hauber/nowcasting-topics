@@ -35,7 +35,7 @@ function [stT,PtT,LL] = f_KS_DK_logL(data,T,Z,H,R,Q,s0,P0)
 
         % update state vector and its covariance matrix
         a(:,t+1) = T(:,:, t)*a(:,t) + K*v{ t };
-        P(:,:,t+1) = T(:,:, t)*P(:,:,t)*L(:,:,t)' + R*Q*R';
+        P(:,:,t+1) = T(:,:, t)*P(:,:,t)*L(:,:,t)' + R(:,:, t)*Q*R(:,:, t)';
 
         % compute log likelihood
         LL = LL - 0.5 * (log( det( F{ t } ) ) + v{ t }' / F{ t } *  v{ t } ) ;  

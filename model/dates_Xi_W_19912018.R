@@ -52,6 +52,67 @@ df %>%
          Xi_m = ifelse(day == 1, 0, 1),
          Xi_w = ifelse(weekday == "Mo", 0, 1)) -> df
 
+#_____________________________________________________#
+#_calculate weights for monthly flow variables
+#_____________________________________________________#
+
+# days per quarter and average number of days per quarter over the entire sample
+df %>% 
+  select(year, month, day) %>% 
+  group_by(year, month) %>% 
+  summarise(n_days_m = n()) %>% 
+  ungroup() -> df_n_days_m
+
+df_n_days_m$n_days_avg_m = floor(mean(df_n_days_m$n_days_m))
+
+# loop over quarters to construct W_q_c and W_q_p
+years <- seq(1991, 2018)
+months <- seq(1, 12)
+t_prev <- 0
+t <- 0
+k <- df_n_days_m$n_days_avg_m[1]
+df_W_md <- data.frame()
+for (y in years)
+{
+  print(y)
+  for (m in months)
+  {
+    print(paste("m =", m))
+    t_prev <- t
+    print(paste("tprev =", t_prev))
+    k_t <- df_n_days_m[df_n_days_m$year == y & df_n_days_m$month == m, "n_days_m", drop = T]
+    print(paste("k_t =",k_t))
+    t <- t + k_t
+    print(paste("t =", t))
+    s <- seq(t_prev + 1, t)
+    #W_qd_c = k * (t + 1 - s) / k_t # see Banbura et al. (2011, p. 30, eqn 10)
+    W_md_c = (t + 1 - s) / k_t # monthly level  is the average of daily level in the respective month
+    if (y == years[length(years)] & m == months[length(quarters)]) # W_q_p = 0 => Not necessary but conceptually clearer!
+    {
+      
+      df_W_md <- rbind(df_W_md, data.frame(year = y,
+                                           month = m,
+                                           day = seq(1, k_t),
+                                           W_md_c = W_md_c,
+                                           W_md_p = 0
+      )
+      )
+      
+    } else
+    {
+      df_W_md <- rbind(df_W_md, data.frame(year = y,
+                                           month = m,
+                                           day = seq(1, k_t),
+                                           W_md_c = W_md_c,
+                                           W_md_p = c(0, rev(W_md_c[2:length(W_md_c)]))
+      )
+      )
+    }
+  }
+}
+
+# cbind to df
+df <- cbind(df, select(df_W_md, W_md_c, W_md_p))
 
 #_____________________________________________________#
 #_calculate weights for quarterly flow variables

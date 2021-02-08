@@ -20,8 +20,8 @@ clear; close all; clc;
 %-------------------------------------------------------------------------%
 
 % set-up
-Nd = 50; % # of daily series  
-Nw = 0; % # of weekly series
+Nd = 5; % # of daily series  
+Nw = 1; % # of weekly series
 Nm = 0; % # of monthly series
 Nq = 2; % # of quarterly series
 Nq_flow = Nq / 2; % # of quarterly flow series
@@ -367,8 +367,10 @@ end
 if Nw > 0
     subplot(nrow_plot,2,counter)
     scatter(lam_w(:, 1), lam_w_hat(:, 1), 'b')
-    hold on;
-    scatter(lam_w(:, 2), lam_w_hat(:, 2), 'r')
+    if Nr == 2
+        hold on;
+        scatter(lam_w(:, 2), lam_w_hat(:, 2), 'r')
+    end
     ylim([-1.5 1.5])
     xlim([-1.5 1.5])
     refline(1, 0)

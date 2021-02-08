@@ -55,6 +55,25 @@ df %>%
          Xi_w = ifelse(weekday == "Mo", 0, 1)) -> df
 
 #_____________________________________________________#
+#_map weekly to monthly observations
+#_____________________________________________________#
+
+# determine to which month each weekly observation belongs according to where the majority of its constituent days are in
+# this is appropriate for a weekly flow, e.g. weekly retail sales
+df %>% 
+  select(date, year, month, week) %>% 
+  group_by(year, week) %>% 
+  mutate(month_of_w = median(month)) -> df_tmp_flow
+
+# if the weekly series is a stock and published on a given day or is known to reflect data up until a certain date
+# then selecting that date is more appropriate, e.g. initial claims (published Thursday but reflect developments until the previous Saturday)
+df %>% 
+  select(date, year, month, week, weekday) %>% 
+  filter(weekday == "Sa") %>% 
+  group_by(year, month) %>%
+  summarise(n_week_per_month = n()) -> df_tmp_stock
+
+#_____________________________________________________#
 #_calculate weights for monthly flow variables
 #_____________________________________________________#
 

@@ -20,13 +20,13 @@ clear; close all; clc;
 %-------------------------------------------------------------------------%
 
 % set-up
-Nd = 5; % # of daily series  
-Nw = 1; % # of weekly series
-Nm = 2; % # of monthly series
+Nd = 20; % # of daily series  
+Nw = 10; % # of weekly series
+Nm = 6; % # of monthly series
 Nm_flow = Nm / 2; % # of quarterly flow series
 Nm_stock = Nm - Nm_flow; % # of quarterly stock series
 ind_m_flow = [repelem(true, Nm_flow), repelem(false, Nm_stock)];
-Nq = 2; % # of quarterly series
+Nq = 6; % # of quarterly series
 Nq_flow = Nq / 2; % # of quarterly flow series
 Nq_stock = Nq - Nq_flow; % # of quarterly stock series
 ind_q_flow = [repelem(true, Nq_flow), repelem(false, Nq_stock)];
@@ -242,6 +242,8 @@ params.sig2_m = sig2_m;
 params.sig2_q = sig2_q;
 params.Xi_w = Xi_w;
 params.Xi_m = Xi_m;
+params.W_md_c = W_md_c;
+params.W_md_p = W_md_p;
 params.Xi_q = Xi_q;
 params.W_qd_c = W_qd_c;
 params.W_qd_p = W_qd_p;
@@ -260,7 +262,7 @@ toc
 % plot actual and sampled states
 nrow_plot = double(Nd > 0) + double(Nw > 0) + double(Nm > 0) + double(Nq > 0);
 
-[id_f, id_f_lags, id_f_d, id_f_w, id_f_m, id_f_q_flow, id_f_q_stock] = f_id_fs(Nr, Np_eff, Nd, Nw, Nm, Nq_flow, Nq_stock); % get positions of factors in state vector
+[id_f, id_f_lags, id_f_d, id_f_w, id_f_m_flow, id_f_m_stock, id_f_q_flow, id_f_q_stock] = f_id_fs(Nr, Np_eff, Nd, Nw, Nm_flow, Nm_stock, Nq_flow, Nq_stock); % get positions of factors in state vector
 
 figure;
 counter = 1;
@@ -288,9 +290,9 @@ end
 
 if Nm > 0
 subplot(nrow_plot,1,counter)
-plot(stT(id_f_m, :)', 'b')
+plot([stT(id_f_m_flow, :); stT(id_f_m_stock, :)]', 'b')
 hold on
-plot(f_m', 'r')
+plot([f_m_c; f_m]', 'r')
 title('f_m (sampled in blue)')
 xticks(ind_plot(5:5:end))
 xticklabels(dates_plot(5:5:end))
@@ -312,7 +314,7 @@ end
 %-------------------------------------------------------------------------%
 
 % get positions of factors in state vector
-[id_f, id_f_lags, id_f_d, id_f_w, id_f_m, id_f_q_flow, id_f_q_stock] = f_id_fs(Nr, Np_eff, Nd, Nw, Nm, Nq_flow, Nq_stock);
+[id_f, id_f_lags, id_f_d, id_f_w, id_f_m_flow, id_f_m_stock, id_f_q_flow, id_f_q_stock] = f_id_fs(Nr, Np_eff, Nd, Nw, Nm_flow, Nm_stock, Nq_flow, Nq_stock);
 
 % lam_d and sig_d
 if Nd > 0
@@ -326,7 +328,14 @@ end
 
 % lam_m and sig2_m
 if Nm > 0
-    [lam_m_hat, sig2_m_hat] = f_sample_lam_sig(y_m_o, stT(id_f_m, :), PtT(id_f_m, id_f_m, :), sig2_m);
+    if Nm_flow > 0
+        [lam_m_flow_hat, sig2_m_flow_hat] = f_sample_lam_sig(y_m_o(ind_m_flow,:), stT(id_f_m_flow, :), PtT(id_f_m_flow, id_f_m_flow, :), sig2_m(ind_m_flow));
+    end
+    if Nm_stock > 0
+        [lam_m_stock_hat, sig2_m_stock_hat] = f_sample_lam_sig(y_m_o(~ind_m_flow,:), stT(id_f_m_stock, :), PtT(id_f_m_stock, id_f_m_stock, :), sig2_m(~ind_m_flow));
+    end
+    lam_m_hat = [lam_m_flow_hat; lam_m_stock_hat];
+    sig2_m_hat = [sig2_m_flow_hat; sig2_m_stock_hat];
 end
 
 % lam_q and sig_q
@@ -426,10 +435,12 @@ end
 
 if Nm > 0
     subplot(nrow_plot,2,counter)
-    scatter(lam_m(:, 1), lam_m_hat(:, 1), 'b')
+    scatter(lam_m(ind_m_flow, 1), lam_m_hat(ind_m_flow, 1), 'bx')
+    hold on
+    scatter(lam_m(~ind_m_flow, 1), lam_m_hat(~ind_m_flow, 1), 'bo')
     if Nr == 2
-        hold on;
-        scatter(lam_m(:, 2), lam_m_hat(:, 2), 'r')
+        scatter(lam_m(ind_m_flow, 2), lam_m_hat(ind_m_flow, 2), 'rx')
+        scatter(lam_m(~ind_m_flow, 2), lam_m_hat(~ind_m_flow, 2), 'ro')
     end
     ylim([-1.5 1.5])
     xlim([-1.5 1.5])
@@ -440,7 +451,9 @@ if Nm > 0
     counter = counter + 1;
 
     subplot(nrow_plot,2,counter)
-    scatter(sig2_m, sig2_m_hat)
+    scatter(sig2_m(ind_m_flow), sig2_m_hat(ind_m_flow), 'bx')
+    hold on
+    scatter(sig2_m(~ind_m_flow), sig2_m_hat(~ind_m_flow), 'bo')
     ylim([0 1])
     xlim([0 1])
     refline(1, 0)

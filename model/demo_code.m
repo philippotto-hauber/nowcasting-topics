@@ -345,8 +345,8 @@ if Nd > 0
         hold on;
         scatter(lam_d(:, 2), lam_d_hat(:, 2), 'r')
     end
-    ylim([-1 1])
-    xlim([-1 1])
+    ylim([-1.5 1.5])
+    xlim([-1.5 1.5])
     refline(1, 0)
     title('lam_d')
     ylabel('estimate')
@@ -369,8 +369,8 @@ if Nw > 0
     scatter(lam_w(:, 1), lam_w_hat(:, 1), 'b')
     hold on;
     scatter(lam_w(:, 2), lam_w_hat(:, 2), 'r')
-    ylim([-1 1])
-    xlim([-1 1])
+    ylim([-1.5 1.5])
+    xlim([-1.5 1.5])
     refline(1, 0)
     title('lam_w')
     ylabel('estimate')
@@ -393,8 +393,8 @@ if Nm > 0
     scatter(lam_m(:, 1), lam_m_hat(:, 1), 'b')
     hold on;
     scatter(lam_m(:, 2), lam_m_hat(:, 2), 'r')
-    ylim([-1 1])
-    xlim([-1 1])
+    ylim([-1.5 1.5])
+    xlim([-1.5 1.5])
     refline(1, 0)
     title('lam_m')
     ylabel('estimate')
@@ -421,8 +421,8 @@ if Nq > 0
         scatter(lam_q(ind_q_flow, 2), lam_q_hat(ind_q_flow, 2), 'rx')
         scatter(lam_q(~ind_q_flow, 2), lam_q_hat(~ind_q_flow, 2), 'ro')
     end
-    ylim([-1 1])
-    xlim([-1 1])
+    ylim([-1.5 1.5])
+    xlim([-1.5 1.5])
     refline(1, 0)
     title('lam_q')
     ylabel('estimate')

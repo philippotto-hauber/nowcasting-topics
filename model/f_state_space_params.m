@@ -11,7 +11,7 @@ Nq_stock = size(params.lam_q_stock, 1);
 Nq = Nq_flow + Nq_stock;
 Nr = size(params.Phi, 1);
 Np_eff = size(params.Phi, 2)/Nr + 1;
-Nt = size(params.Xi_m, 1); 
+Nt = size(params.Xi_dm, 1); 
 
 % determine size of state vector Ns
 Ns = Nr * Np_eff;  
@@ -54,33 +54,33 @@ for t = 1:Nt
     Ttmp = [params.Phi zeros(Nr, Ns-size(params.Phi, 2));
             eye(Nr * (Np_eff-1)) zeros(Nr * (Np_eff-1), Ns - Nr * (Np_eff-1))];
     if Nw > 0 && Nd > 0 % if there are weekly series and its not the highest frequency. Otherwise its dynamics are governed by phi_f!
-        Ttmp = [Ttmp; zeros(Nr, size(Ttmp, 1)) params.Xi_w(t) * eye(Nr) zeros(Nr, Ns - (size(Ttmp, 1) + Nr))];
+        Ttmp = [Ttmp; zeros(Nr, size(Ttmp, 1)) params.Xi_dw(t) * eye(Nr) zeros(Nr, Ns - (size(Ttmp, 1) + Nr))];
     end
     if Nm_flow > 0 && (Nw > 0 || Nd > 0) 
-        if params.Xi_m(t) == 0
+        if params.Xi_dm(t) == 0
             Ttmp = [Ttmp; zeros(2*Nr, size(Ttmp, 1)) zeros(2*Nr, Nr) [eye(Nr); zeros(Nr)] zeros(2*Nr, Ns - (size(Ttmp, 1) + 2*Nr))];
         else
             Ttmp = [Ttmp; zeros(2*Nr, size(Ttmp, 1)) eye(2*Nr) zeros(2*Nr, Ns - (size(Ttmp, 1) + 2*Nr))];
         end
     end
     if Nm_stock > 0 && (Nw > 0 || Nd > 0)
-        Ttmp = [Ttmp; zeros(Nr, size(Ttmp, 1)) params.Xi_m(t)*eye(Nr) zeros(Nr, Ns - (size(Ttmp, 1) + Nr))];
+        Ttmp = [Ttmp; zeros(Nr, size(Ttmp, 1)) params.Xi_dm(t)*eye(Nr) zeros(Nr, Ns - (size(Ttmp, 1) + Nr))];
     end
     if Nq_flow > 0 && (Nm > 0 || Nw > 0 || Nd > 0)
-        if params.Xi_q(t) == 0
+        if params.Xi_dq(t) == 0
             Ttmp = [Ttmp; zeros(2*Nr, size(Ttmp, 1)) zeros(2*Nr, Nr) [eye(Nr); zeros(Nr)] zeros(2*Nr, Ns - (size(Ttmp, 1) + 2*Nr))];
         else
             Ttmp = [Ttmp; zeros(2*Nr, size(Ttmp, 1)) eye(2*Nr) zeros(2*Nr, Ns - (size(Ttmp, 1) + 2*Nr))];
         end
-        %Ttmp = [Ttmp; zeros(Nr, size(Ttmp, 1)) params.Xi_q(t) * eye(Nr) zeros(Nr, Ns - (size(Ttmp, 1) + Nr))];
+        %Ttmp = [Ttmp; zeros(Nr, size(Ttmp, 1)) params.Xi_dq(t) * eye(Nr) zeros(Nr, Ns - (size(Ttmp, 1) + Nr))];
     end
     if Nq_stock > 0 && (Nm > 0 || Nw > 0 || Nd > 0)
-        if params.Xi_q(t) == 0
+        if params.Xi_dq(t) == 0
             Ttmp = [Ttmp; zeros(Nr, size(Ttmp, 1)) zeros(Nr) zeros(Nr, Ns - (size(Ttmp, 1) + Nr))];
         else
             Ttmp = [Ttmp; zeros(Nr, size(Ttmp, 1)) eye(Nr) zeros(Nr, Ns - (size(Ttmp, 1) + Nr))];
         end
-        %Ttmp = [Ttmp; zeros(Nr, size(Ttmp, 1)) params.Xi_q(t) * eye(Nr) zeros(Nr, Ns - (size(Ttmp, 1) + Nr))];
+        %Ttmp = [Ttmp; zeros(Nr, size(Ttmp, 1)) params.Xi_dq(t) * eye(Nr) zeros(Nr, Ns - (size(Ttmp, 1) + Nr))];
     end
     T(:, :, t) = iT0 * Ttmp;
 end

@@ -1,4 +1,4 @@
-function [Z, H, T, R, Q] = f_state_space_params(params)
+function [Z, H, T, R, Q] = f_state_space_params(params, aux)
 
 % back out dimensions of state space system
 Nd = size(params.lam_d, 1);
@@ -11,7 +11,7 @@ Nq_stock = size(params.lam_q_stock, 1);
 Nq = Nq_flow + Nq_stock;
 Nr = size(params.Phi, 1);
 Np_eff = size(params.Phi, 2)/Nr + 1;
-Nt = size(params.Xi_md, 1); 
+Nt = size(aux.Xi_md, 1); 
 
 % determine size of state vector Ns
 Ns = Nr * Np_eff;  
@@ -32,13 +32,13 @@ for t = 1:Nt
         T0tmp = [T0tmp; -eye(Nr)];
     end
     if Nm_flow > 0 && (Nw > 0 || Nd > 0)
-        T0tmp = [T0tmp; -params.W_md_c(t) * eye(Nr); -params.W_md_p(t) * eye(Nr)];
+        T0tmp = [T0tmp; -aux.W_md_c(t) * eye(Nr); -aux.W_md_p(t) * eye(Nr)];
     end
     if Nm_stock > 0 && (Nw > 0 || Nd > 0)
         T0tmp = [T0tmp; -eye(Nr)];
     end
     if Nq_flow > 0
-        T0tmp = [T0tmp; -params.W_qd_c(t) * eye(Nr); -params.W_qd_p(t) * eye(Nr)];
+        T0tmp = [T0tmp; -aux.W_qd_c(t) * eye(Nr); -aux.W_qd_p(t) * eye(Nr)];
     end
     if Nq_stock > 0
         T0tmp = [T0tmp; -eye(Nr)];
@@ -54,20 +54,20 @@ for t = 1:Nt
     Ttmp = [params.Phi zeros(Nr, Ns-size(params.Phi, 2));
             eye(Nr * (Np_eff-1)) zeros(Nr * (Np_eff-1), Ns - Nr * (Np_eff-1))];
     if Nw > 0 && Nd > 0 % if there are weekly series and its not the highest frequency. Otherwise its dynamics are governed by phi_f!
-        Ttmp = [Ttmp; zeros(Nr, size(Ttmp, 1)) params.Xi_wd(t) * eye(Nr) zeros(Nr, Ns - (size(Ttmp, 1) + Nr))];
+        Ttmp = [Ttmp; zeros(Nr, size(Ttmp, 1)) aux.Xi_wd(t) * eye(Nr) zeros(Nr, Ns - (size(Ttmp, 1) + Nr))];
     end
     if Nm_flow > 0 && (Nw > 0 || Nd > 0) 
-        if params.Xi_md(t) == 0
+        if aux.Xi_md(t) == 0
             Ttmp = [Ttmp; zeros(2*Nr, size(Ttmp, 1)) zeros(2*Nr, Nr) [eye(Nr); zeros(Nr)] zeros(2*Nr, Ns - (size(Ttmp, 1) + 2*Nr))];
         else
             Ttmp = [Ttmp; zeros(2*Nr, size(Ttmp, 1)) eye(2*Nr) zeros(2*Nr, Ns - (size(Ttmp, 1) + 2*Nr))];
         end
     end
     if Nm_stock > 0 && (Nw > 0 || Nd > 0)
-        Ttmp = [Ttmp; zeros(Nr, size(Ttmp, 1)) params.Xi_md(t)*eye(Nr) zeros(Nr, Ns - (size(Ttmp, 1) + Nr))];
+        Ttmp = [Ttmp; zeros(Nr, size(Ttmp, 1)) aux.Xi_md(t)*eye(Nr) zeros(Nr, Ns - (size(Ttmp, 1) + Nr))];
     end
     if Nq_flow > 0 && (Nm > 0 || Nw > 0 || Nd > 0)
-        if params.Xi_qd(t) == 0
+        if aux.Xi_qd(t) == 0
             Ttmp = [Ttmp; zeros(2*Nr, size(Ttmp, 1)) zeros(2*Nr, Nr) [eye(Nr); zeros(Nr)] zeros(2*Nr, Ns - (size(Ttmp, 1) + 2*Nr))];
         else
             Ttmp = [Ttmp; zeros(2*Nr, size(Ttmp, 1)) eye(2*Nr) zeros(2*Nr, Ns - (size(Ttmp, 1) + 2*Nr))];
@@ -75,7 +75,7 @@ for t = 1:Nt
         %Ttmp = [Ttmp; zeros(Nr, size(Ttmp, 1)) params.Xi_qd(t) * eye(Nr) zeros(Nr, Ns - (size(Ttmp, 1) + Nr))];
     end
     if Nq_stock > 0 && (Nm > 0 || Nw > 0 || Nd > 0)
-        if params.Xi_qd(t) == 0
+        if aux.Xi_qd(t) == 0
             Ttmp = [Ttmp; zeros(Nr, size(Ttmp, 1)) zeros(Nr) zeros(Nr, Ns - (size(Ttmp, 1) + Nr))];
         else
             Ttmp = [Ttmp; zeros(Nr, size(Ttmp, 1)) eye(Nr) zeros(Nr, Ns - (size(Ttmp, 1) + Nr))];

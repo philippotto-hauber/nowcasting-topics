@@ -157,18 +157,12 @@ f = F(1:Nr, :);
 
 % extract actually observed monthly and quarterly values
 y_d_o = y_d;
-tmp = 1:Nt;
-ind_w_o = tmp(Xi_wd==0) - 1;
-ind_w_o = ind_w_o(ind_w_o > 0);
+ind_w_o = f_ind_o(Xi_wd);
 y_w_o = NaN(Nw, Nt);y_w_o(:, ind_w_o) = y_w(:, ind_w_o);
-ind_m_o = tmp(Xi_md==0) - 1;
-ind_m_o = ind_m_o(ind_m_o > 0);
+ind_m_o = f_ind_o(Xi_md);
 y_m_o = NaN(Nm, Nt);y_m_o(:, ind_m_o) = y_m(:, ind_m_o);
-ind_q_o = tmp(Xi_qd==0) - 1;
-ind_q_o = ind_q_o(ind_q_o > 0);
+ind_q_o = f_ind_o(Xi_qd);
 y_q_o = NaN(Nq, Nt);y_q_o(:, ind_q_o) = y_q(:, ind_q_o);
-clearvars tmp ind_w_o ind_m_o ind_q_o
-
 
 % plot factors and obs
 figure; 
@@ -254,7 +248,7 @@ aux.ind_m_flow = ind_m_flow;
 aux.ind_q_flow = ind_q_flow;
 
 % state space form
-[Z, H, T, R, Q] = f_state_space_params(params);
+[Z, H, T, R, Q] = f_state_space_params(params, aux);
 
 % Kalman smoother
 s0 = zeros(size(Z, 2), 1); P0 = 10 * eye(size(Z, 2));
@@ -500,4 +494,5 @@ end
 % estimate parameters (M-step)
 %-------------------------------------------------------------------------%
 
-params_init = f_start_vals(y_d_o, y_w, y_m, y_q_o, aux, Nr);
+params_init = f_start_vals(y_d_o, y_w_o, y_m_o, y_q_o, aux, Nr);
+

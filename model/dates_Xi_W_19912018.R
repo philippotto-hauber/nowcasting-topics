@@ -50,9 +50,9 @@ df %>%
 
 # create Xi indicators that equal 0 at start of period and 1 elsewhere
 df %>% 
-  mutate(Xi_dq = ifelse(month == 1 & day == 1, 0, 1),
-         Xi_dm = ifelse(day == 1, 0, 1),
-         Xi_dw = ifelse(weekday == "Mo", 0, 1)) -> df
+  mutate(Xi_qd = ifelse(month %in% c(seq(1, 10, by = 3)) & day == 1, 0, 1),
+         Xi_md = ifelse(day == 1, 0, 1),
+         Xi_wd = ifelse(weekday == "Mo", 0, 1)) -> df
 
 #_____________________________________________________#
 #_map weekly to monthly observations

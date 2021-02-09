@@ -40,11 +40,11 @@ Np_eff = Np + 1; % # of lags of f in state vector (always needs to be one higher
 tmp = importdata('dates_Xi_W_19912018.csv');
 Nt = size(tmp.data, 1); % # of observations (daily frequency)
 offset_nonnumvars = size(tmp.textdata, 2) - size(tmp.data, 2); % number of non-numeric vars (these are ordered first!) 
-Xi_dw =  tmp.data(:, find(contains(tmp.textdata(1,:), 'Xi_dw')) - offset_nonnumvars); % equals 0 if start of new week
-Xi_dm =  tmp.data(:, find(contains(tmp.textdata(1,:), 'Xi_dm')) - offset_nonnumvars); % equals 0 if start of new month
+Xi_wd =  tmp.data(:, find(contains(tmp.textdata(1,:), 'Xi_wd')) - offset_nonnumvars); % equals 0 if start of new week
+Xi_md =  tmp.data(:, find(contains(tmp.textdata(1,:), 'Xi_md')) - offset_nonnumvars); % equals 0 if start of new month
 W_md_c =  tmp.data(:, find(contains(tmp.textdata(1,:), 'W_md_c')) - offset_nonnumvars); 
 W_md_p =  tmp.data(:, find(contains(tmp.textdata(1,:), 'W_md_p')) - offset_nonnumvars); 
-Xi_dq =  tmp.data(:, find(contains(tmp.textdata(1,:), 'Xi_dq')) - offset_nonnumvars); % equals 0 if start of new quarter
+Xi_qd =  tmp.data(:, find(contains(tmp.textdata(1,:), 'Xi_qd')) - offset_nonnumvars); % equals 0 if start of new quarter
 W_qd_c =  tmp.data(:, find(contains(tmp.textdata(1,:), 'W_qd_c')) - offset_nonnumvars); 
 W_qd_p =  tmp.data(:, find(contains(tmp.textdata(1,:), 'W_qd_p')) - offset_nonnumvars);
 ind_plot = tmp.data(:, find(contains(tmp.textdata(1,:), 'ind_plot')) - offset_nonnumvars);
@@ -118,10 +118,10 @@ for t = 1:Nt
         F(:,t) = [Phi; eye(Nr * (Np-1)) zeros(Nr * (Np-1), Nr)] * F(:, t-1) + [eye(Nr); zeros(Nr * (Np-1), Nr)] * mvnrnd(zeros(Nr, 1), Omeg)';
         
         % weekly factor 
-        if Xi_dw(t) == 0; f_w(:, t) = F(1:Nr, t); else;f_w(:, t) = f_w(:, t-1) + F(1:Nr, t); end
+        if Xi_wd(t) == 0; f_w(:, t) = F(1:Nr, t); else;f_w(:, t) = f_w(:, t-1) + F(1:Nr, t); end
         
         % monthly factor 
-        if Xi_dm(t) == 0
+        if Xi_md(t) == 0
             f_m(:, t) = F(1:Nr, t);
             f_m_c(:, t) = f_m_p(:, t-1) + F(1:Nr, t);
             f_m_p(:, t) = zeros(Nr, 1); 
@@ -132,7 +132,7 @@ for t = 1:Nt
         end
         
         % quarterly factor 
-        if Xi_dq(t) == 0 
+        if Xi_qd(t) == 0 
             f_q(:, t) = F(1:Nr, t); 
             f_q_c(:, t) = f_q_p(:, t-1) + F(1:Nr, t);
             f_q_p(:, t) = zeros(Nr, 1); 
@@ -158,13 +158,13 @@ f = F(1:Nr, :);
 % extract actually observed monthly and quarterly values
 y_d_o = y_d;
 tmp = 1:Nt;
-ind_w_o = tmp(Xi_dw==0) - 1;
+ind_w_o = tmp(Xi_wd==0) - 1;
 ind_w_o = ind_w_o(ind_w_o > 0);
 y_w_o = NaN(Nw, Nt);y_w_o(:, ind_w_o) = y_w(:, ind_w_o);
-ind_m_o = tmp(Xi_dm==0) - 1;
+ind_m_o = tmp(Xi_md==0) - 1;
 ind_m_o = ind_m_o(ind_m_o > 0);
 y_m_o = NaN(Nm, Nt);y_m_o(:, ind_m_o) = y_m(:, ind_m_o);
-ind_q_o = tmp(Xi_dq==0) - 1;
+ind_q_o = tmp(Xi_qd==0) - 1;
 ind_q_o = ind_q_o(ind_q_o > 0);
 y_q_o = NaN(Nq, Nt);y_q_o(:, ind_q_o) = y_q(:, ind_q_o);
 clearvars tmp ind_w_o ind_m_o ind_q_o
@@ -240,11 +240,11 @@ params.sig2_d = sig2_d;
 params.sig2_w = sig2_w;
 params.sig2_m = sig2_m;
 params.sig2_q = sig2_q;
-params.Xi_dw = Xi_dw;
-params.Xi_dm = Xi_dm;
+params.Xi_wd = Xi_wd;
+params.Xi_md = Xi_md;
 params.W_md_c = W_md_c;
 params.W_md_p = W_md_p;
-params.Xi_dq = Xi_dq;
+params.Xi_qd = Xi_qd;
 params.W_qd_c = W_qd_c;
 params.W_qd_p = W_qd_p;
 params.Phi = Phi;
@@ -492,3 +492,6 @@ if Nq > 0
     xlabel('actual')
     counter = counter + 1;
 end
+
+
+

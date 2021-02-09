@@ -240,15 +240,18 @@ params.sig2_d = sig2_d;
 params.sig2_w = sig2_w;
 params.sig2_m = sig2_m;
 params.sig2_q = sig2_q;
-params.Xi_wd = Xi_wd;
-params.Xi_md = Xi_md;
-params.W_md_c = W_md_c;
-params.W_md_p = W_md_p;
-params.Xi_qd = Xi_qd;
-params.W_qd_c = W_qd_c;
-params.W_qd_p = W_qd_p;
 params.Phi = Phi;
 params.Omeg = Omeg;
+
+aux.Xi_wd = Xi_wd;
+aux.Xi_md = Xi_md;
+aux.W_md_c = W_md_c;
+aux.W_md_p = W_md_p;
+aux.Xi_qd = Xi_qd;
+aux.W_qd_c = W_qd_c;
+aux.W_qd_p = W_qd_p;
+aux.ind_m_flow = ind_m_flow;
+aux.ind_q_flow = ind_q_flow;
 
 % state space form
 [Z, H, T, R, Q] = f_state_space_params(params);
@@ -262,7 +265,7 @@ toc
 % plot actual and sampled states
 nrow_plot = double(Nd > 0) + double(Nw > 0) + double(Nm > 0) + double(Nq > 0);
 
-[id_f, id_f_lags, id_f_d, id_f_w, id_f_m_flow, id_f_m_stock, id_f_q_flow, id_f_q_stock] = f_id_fs(Nr, Np_eff, Nd, Nw, Nm_flow, Nm_stock, Nq_flow, Nq_stock); % get positions of factors in state vector
+[~, ~, id_f_d, id_f_w, id_f_m_flow, id_f_m_stock, id_f_q_flow, id_f_q_stock] = f_id_fs(Nr, Np_eff, Nd, Nw, Nm_flow, Nm_stock, Nq_flow, Nq_stock); % get positions of factors in state vector
 
 figure;
 counter = 1;
@@ -310,7 +313,7 @@ xticklabels(dates_plot(5:5:end))
 end
 
 %-------------------------------------------------------------------------%
-% estimate parameters (M-step)
+% starting values
 %-------------------------------------------------------------------------%
 
 % get positions of factors in state vector
@@ -493,5 +496,8 @@ if Nq > 0
     counter = counter + 1;
 end
 
+%-------------------------------------------------------------------------%
+% estimate parameters (M-step)
+%-------------------------------------------------------------------------%
 
-
+params_init = f_start_vals(y_d_o, y_w, y_m, y_q_o, aux, Nr);

@@ -5,13 +5,14 @@ function params = f_start_vals(y_d, y_w, y_m, y_q, aux, Nr)
 %-----------------------------------%
 
 % initial PCA estimate of daily factors => replace with EM alg a la Stock Watson
-f = f_PCA(y_d, Nr);
+[f, y_d_star] = f_em_sw(y', Nr);
+%f = f_PCA(y_d, Nr);
 
 % scale factors to unit variance
 f  = f ./ std(f, [], 2);
 
 % lam_d, sig2_d
-[params.lam_d, params.sig2_d] = f_ols(y_d, f);
+[params.lam_d, params.sig2_d] = f_ols(y_d_star, f);
 
 %-----------------------------------%
 %- lam_w, sig2_w

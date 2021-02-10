@@ -9,6 +9,7 @@ library(lubridate)
 library(dplyr)
 library(tidyr)
 library(bundesbank)
+library(tibble)
 
 # FUNCTIONS ----
 #_____________________________________________________#
@@ -100,11 +101,18 @@ f_outl <- function(y, aalpha)
 #_specify vintage, 
 #_forecast horizon,
 #_number of topics to select
+#_window of moving average
+#_band width
+#_aalpha
+#_(these parameters will be function input at a later point)
 #_____________________________________________________#
 
 vintage <- c("2010-01-30") # requires backcast!
 date_h <- c("2010-06-30") # 2010Q2
 Ntopics <- 10 # select Ntopics topics that have the highest correlation with quarterly GDP growth
+K = 60 # window of moving average
+bw = 1200 # bandwidth for biweight filter
+aalpha <- 10 # number of IQR between median to determine outlier
 
 # LOAD TOPICS ----
 #_____________________________________________________#
@@ -167,7 +175,7 @@ ind_topics <- which(grepl("T", names(df_topics)))
 #_____________________________________________________#
 
 # remove outlier
-ind_outl <- apply(df_topics[, ind_topics], c(2), f_outl, aalpha = 10)
+ind_outl <- apply(df_topics[, ind_topics], c(2), f_outl, aalpha = aalpha)
 dat <- df_topics[, ind_topics]
 dat[ind_outl] <- NA
 
@@ -176,10 +184,10 @@ ind_NA <- is.na(dat)
 colnames(ind_NA) <- names(df_topics)[grepl("T", names(df_topics))]
 
 # moving average
-dat_ma <- apply(dat, c(2), rollmean, k = 60)
+dat_ma <- apply(dat, c(2), rollmean, k = K)
 
 # detrend with biweight filter
-dat_bw <- apply(dat_ma, c(2), bw_filter, bw = 1200)
+dat_bw <- apply(dat_ma, c(2), bw_filter, bw = bw)
 dat_detrend <- dat_ma - dat_bw # de-trended topics
 
 # reimpose NA pattern
@@ -190,6 +198,8 @@ dat_detrend_NA[ind_NA] <- NA
 df_topics_trafo <- df_topics
 df_topics_trafo[ind_topics] <- dat_detrend_NA
 
+# rm first K rows
+df_topics_trafo <- df_topics_trafo[seq(K+1, nrow(df_topics_trafo)), ]
 
 plot(df_topics$date, df_topics[, 7], 
      type = "l", col = "blue", 
@@ -197,9 +207,62 @@ plot(df_topics$date, df_topics[, 7],
      main = "Topic T1", sub = "raw and detrended series",
      ylab = "",
      xlab = "")
-lines(df_topics$date, df_topics_trafo[, 7], type = "l", col = "red")
+lines(df_topics_trafo$date, df_topics_trafo[, 7], type = "l", col = "red")
 
+# DOWNLOAD GDP DATA ----
 
+# get vintages from Bundesbank real-time database
+df_gdp <- getSeries("BBKRT.Q.DE.Y.A.AG1.CA010.A.I") # calendar and seasonally adjusted GDP
 
-# GDP DATA ----
+# select vintage
+dates_vintages <- as.Date(names(df_gdp))
+ind_vintage <- sum(dates_vintages <= vintage)
+df_gdp <- df_gdp[, ind_vintage, drop = F]
+
+# convert dates to column
+df_gdp %>% 
+  select(tail(names(.), 1)) %>%
+  rownames_to_column(var = "date") %>%
+  mutate(year = as.numeric(substr(date, 1, 4)), 
+         month = as.numeric(substr(date, 6, 7))+2,  
+         quarter = ceiling(month/3),
+         date_tmp = make_date(year = year, month = ifelse(month+1>12,1,month+1), day = 1),
+         date = date_tmp - days(1),
+         day = day(date)# middle of the quarter, e.g. 15.2. for Q1
+        )-> df_gdp
+
+# adjust name of series
+names(df_gdp)[2] <- "gdp"
+
+# calculate annualized quarterly growth rate
+df_gdp$d_gdp <- c(NA, 400 * diff(log(df_gdp$gdp)))
+
+# select and reorder columns
+df_gdp %>% select(date, year, quarter, month, day, d_gdp) -> df_gdp
+
+# convert to "daily" frequency
+dates_tmp <- data.frame(date = seq(min(df_topics_trafo$date), 
+                                   max(df_topics_trafo$date), 
+                                   by = "days")
+                        )
+
+dates_tmp %>% 
+  mutate(year = year(date),
+         month = month(date),
+         quarter = ceiling(month / 3),
+         day = day(date)) %>%
+  merge(df_gdp, by = c("date", "year", "quarter", "month", "day"), all.x = T) -> df_gdp
+
+# get rid of dates_tmp
+rm(dates_tmp)
+
+# AUXILIARY VARS ----
+
+# create Xi_q indicators that equals 0 at start of period and 1 elsewhere
+df_gdp %>% 
+  mutate(Xi_qd = ifelse(month %in% c(seq(1, 10, by = 3)) & day == 1, 0, 1)) -> df_gdp
+
+df_gdp$Xi_qd[1] <- 0 # first obs is also "start" of quarter
+
+# days per quarter and average number of days per quarter over the entire sample
 

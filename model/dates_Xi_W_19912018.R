@@ -77,7 +77,7 @@ df %>%
 #_calculate weights for monthly flow variables
 #_____________________________________________________#
 
-# days per quarter and average number of days per quarter over the entire sample
+# days per month and average number of days per month over the entire sample
 df %>% 
   select(year, month, day) %>% 
   group_by(year, month) %>% 

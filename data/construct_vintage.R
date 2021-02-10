@@ -185,7 +185,7 @@ df_topics_trafo[ind_topics] <- dat_detrend_NA
 plot(df_topics$date, df_topics[, 7], 
      type = "l", col = "blue", 
      ylim = c(-0.02, 0.12), 
-     main = "Topic T0", sub = "raw and detrended series",
+     main = "Topic T1", sub = "raw and detrended series",
      ylab = "",
      xlab = "")
 lines(df_topics$date, df_topics_trafo[, 7], type = "l", col = "red")

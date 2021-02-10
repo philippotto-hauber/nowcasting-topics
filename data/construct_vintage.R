@@ -98,6 +98,7 @@ f_outl <- function(y, aalpha)
 
 # SET-UP ----
 #_____________________________________________________#
+#_sample_start,
 #_specify vintage, 
 #_forecast horizon,
 #_number of topics to select
@@ -107,6 +108,7 @@ f_outl <- function(y, aalpha)
 #_(these parameters will be function input at a later point)
 #_____________________________________________________#
 
+sample_start <- c("1995-01-01")
 vintage <- c("2010-01-30") # requires backcast!
 date_h <- c("2010-06-30") # 2010Q2
 Ntopics <- 10 # select Ntopics topics that have the highest correlation with quarterly GDP growth
@@ -154,6 +156,9 @@ rm(dates_tmp)
 # col indices corresponding to topics
 ind_topics <- which(grepl("T", names(df_topics)))
 
+# adjust sample (leaving K additional rows at start which will be removed after smoothing)
+df_topics %>% filter(date >= as.Date(sample_start) - days(K)) -> df_topics
+
 # linear interpolate topics to fill-in missings, storing pattern of NA => commented out because moving average should take care of missings
 # ind_NA <- c()
 # for (n in ind_topics)
@@ -166,12 +171,13 @@ ind_topics <- which(grepl("T", names(df_topics)))
 # 
 # colnames(ind_NA) <- names(df_topics)[grepl("T", names(df_topics))]
 
-# TRANSFORM TOPCIS ---- 
+# TRANSFORM TOPICS ---- 
 #_____________________________________________________#
 #_rm outlier,
 #_moving average,
 #_detrend using biweight filter
 #_reimpose NA pattern
+#_adjust sample
 #_____________________________________________________#
 
 # remove outlier
@@ -256,7 +262,21 @@ dates_tmp %>%
 # get rid of dates_tmp
 rm(dates_tmp)
 
-# AUXILIARY VARS ----
+# APPEND ROWS FOR FORECASTS
+
+dates_tmp <- data.frame(date = seq(max(df_gdp$date), 
+                                   as.Date(date_h), 
+                                   by = "days")
+                        )
+
+dates_tmp %>% 
+  mutate(year = year(date),
+         month = month(date),
+         quarter = ceiling(month / 3),
+         day = day(date)) %>%
+  merge(df_gdp, by = c("date", "year", "quarter", "month", "day"), all = T) -> df_gdp
+
+# CREATE Xi_q indicator ----
 
 # create Xi_q indicators that equals 0 at start of period and 1 elsewhere
 df_gdp %>% 
@@ -264,5 +284,14 @@ df_gdp %>%
 
 df_gdp$Xi_qd[1] <- 0 # first obs is also "start" of quarter
 
-# days per quarter and average number of days per quarter over the entire sample
+# WEIGHTS FOR FLOW VARIABLE ----
 
+# days per quarter and average number of days per quarter over the entire sample
+df_gdp %>% 
+  select(year, quarter, day) %>% 
+  filter(!(year == 1994 & quarter == 1)) %>%
+  group_by(year, quarter) %>% 
+  summarise(n_days_q = n()) %>% 
+  ungroup() -> df_n_days_q
+
+df_n_days_q$n_days_avg_q = floor(mean(df_n_days_q$n_days_q))

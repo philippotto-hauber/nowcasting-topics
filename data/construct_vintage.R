@@ -4,14 +4,18 @@ setwd("C:/Users/Philipp/Documents/GitHub/nowcasting-topics/data")
 #_This script ...
 #_____________________________________________________#
 
-# load packages
+# PACKAGES ----
 library(lubridate)
 library(dplyr)
 library(tidyr)
 library(bundesbank)
 
+# FUNCTIONS ----
 #_____________________________________________________#
-#_functions
+#_f_interpolate (currently not required),
+#_ roll_mean 
+#_ bw_filter
+#_ f_outl
 #_____________________________________________________#
 
 f_interpolate <- function(x)
@@ -91,6 +95,7 @@ f_outl <- function(y, aalpha)
   return(abs((y - median(y, na.rm = T))) > aalpha * IQR(y, na.rm = T))
 }
 
+# SET-UP ----
 #_____________________________________________________#
 #_specify vintage, 
 #_forecast horizon,
@@ -101,11 +106,11 @@ vintage <- c("2010-01-30") # requires backcast!
 date_h <- c("2010-06-30") # 2010Q2
 Ntopics <- 10 # select Ntopics topics that have the highest correlation with quarterly GDP growth
 
+# LOAD TOPICS ----
 #_____________________________________________________#
-#_load topics, 
 #_select sample,
 #_extend to 7-day week,
-#_linearly interpolate to fill-in NA
+#_linearly interpolate to fill-in NA (commented out because not necessary)
 #_____________________________________________________#
 
 df_raw <- read.csv("./topics/daily_topics.csv")
@@ -153,8 +158,12 @@ ind_topics <- which(grepl("T", names(df_topics)))
 # 
 # colnames(ind_NA) <- names(df_topics)[grepl("T", names(df_topics))]
 
+# TRANSFORM TOPCIS ---- 
 #_____________________________________________________#
-#_transform topics 
+#_rm outlier,
+#_moving average,
+#_detrend using biweight filter
+#_reimpose NA pattern
 #_____________________________________________________#
 
 # remove outlier
@@ -190,4 +199,7 @@ plot(df_topics$date, df_topics[, 7],
      xlab = "")
 lines(df_topics$date, df_topics_trafo[, 7], type = "l", col = "red")
 
+
+
+# GDP DATA ----
 

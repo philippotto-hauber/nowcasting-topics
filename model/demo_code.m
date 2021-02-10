@@ -164,6 +164,18 @@ y_m_o = NaN(Nm, Nt);y_m_o(:, ind_m_o) = y_m(:, ind_m_o);
 ind_q_o = f_ind_o(Xi_qd);
 y_q_o = NaN(Nq, Nt);y_q_o(:, ind_q_o) = y_q(:, ind_q_o);
 
+% randomly set some daily series to NaN
+for n = 1:Nd
+    ind_nan = randsample(Nt, 3000);
+    y_d_o(n, ind_nan) = NaN;
+end    
+
+% set last two quarterly obs to NaN
+y_q_o(:, ind_q_o(end-1:end)) = NaN;
+
+% set last two monthly obs to NaN for some series
+y_m_o([1, 4], ind_m_o(end-1:end)) = NaN; 
+
 % plot factors and obs
 figure; 
 plot(f', 'Color', [0, 0.4470, 0.7410]); 
@@ -199,7 +211,7 @@ hold on
 plot(y_m_stock(2:end, :)', '-', 'Color', [0.8500, 0.3250, 0.0980, 0.7]);
 xticks(ind_plot(5:5:end))
 xticklabels(dates_plot(5:5:end))
-title('Monthlly series')
+title('Monthly series')
 legend([p1, p2], {'flows', 'stocks'})
 clearvars y_m_flow y_m_stock
 
@@ -307,7 +319,7 @@ xticklabels(dates_plot(5:5:end))
 end
 
 %-------------------------------------------------------------------------%
-% starting values
+% estimate parameters (M-step)
 %-------------------------------------------------------------------------%
 
 % get positions of factors in state vector
@@ -491,7 +503,7 @@ if Nq > 0
 end
 
 %-------------------------------------------------------------------------%
-% estimate parameters (M-step)
+% starting values
 %-------------------------------------------------------------------------%
 
 params_init = f_start_vals(y_d_o, y_w_o, y_m_o, y_q_o, aux, Nr);

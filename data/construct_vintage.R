@@ -276,7 +276,7 @@ dates_tmp %>%
          day = day(date)) %>%
   merge(df_gdp, by = c("date", "year", "quarter", "month", "day"), all = T) -> df_gdp
 
-# CREATE Xi_q indicator ----
+# CREATE Xi_q INDICATOR ----
 
 # create Xi_q indicators that equals 0 at start of period and 1 elsewhere
 df_gdp %>% 

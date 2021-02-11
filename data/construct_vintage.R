@@ -295,3 +295,39 @@ df_gdp %>%
   ungroup() -> df_n_days_q
 
 df_n_days_q$n_days_avg_q = floor(mean(df_n_days_q$n_days_q))
+
+# loop over quarters to construct W_q_c and W_q_p
+years <- seq(year(df_gdp$date[1]), year(df_gdp$date[nrow(df_gdp)])) 
+quarters <- seq(1, 4) 
+t_prev <- 0
+t <- 0
+k <- df_n_days_q$n_days_avg_q[1]
+df_W_qd <- data.frame()
+for (y in years)
+{
+  for (q in quarters)
+  {
+    t_prev <- t
+    k_t <- df_n_days_q[df_n_days_q$year == y & df_n_days_q$quarter == q, "n_days_q", drop = T]
+    if (length(k_t) == 0) # quarter not in sample!
+      next
+    else
+    {
+          t <- t + k_t
+          s <- seq(t_prev + 1, t)
+          #W_qd_c = k * (t + 1 - s) / k_t # see Banbura et al. (2011, p. 30, eqn 10)
+          W_qd_c = (t + 1 - s) / k_t # quarterly GDP level  is the average of daily GDP in the respective quarter
+          df_W_qd <- rbind(df_W_qd, data.frame(year = y,
+                                               quarter = q,
+                                               day = seq(1, k_t),
+                                               W_qd_c = W_qd_c,
+                                               W_qd_p = c(0, rev(W_qd_c[2:length(W_qd_c)]))
+                                              )
+                          )
+
+    }
+  }
+}
+
+# cbind to df
+df_gdp <- cbind(df_gdp, select(df_W_qd, W_qd_c, W_qd_p))

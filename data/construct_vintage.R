@@ -331,3 +331,12 @@ for (y in years)
 
 # cbind to df
 df_gdp <- cbind(df_gdp, select(df_W_qd, W_qd_c, W_qd_p))
+
+# EXPORT TO CSV
+#_____________________________________________________#
+#_merge datasets
+#_mark back-, now- and forecasts
+#_change var names
+#_____________________________________________________#
+
+# set value of GDP for back 

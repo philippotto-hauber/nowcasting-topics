@@ -30,8 +30,8 @@ Nq = 6; % # of quarterly series
 Nq_flow = Nq / 2; % # of quarterly flow series
 Nq_stock = Nq - Nq_flow; % # of quarterly stock series
 ind_q_flow = [repelem(true, Nq_flow), repelem(false, Nq_stock)];
-Nr = 1; % # of factors
-Np = 1; % # of lags in factor VAR
+Nr = 2; % # of factors
+Np = 3; % # of lags in factor VAR
 Np_eff = Np + 1; % # of lags of f in state vector (always needs to be one higher for covariance of factors in M-step!)
 
 
@@ -509,5 +509,5 @@ end
 % starting values
 %-------------------------------------------------------------------------%
 
-params_init = f_start_vals(y_d_o, y_w_o, y_m_o, y_q_o, aux, Nr);
+params_init = f_start_vals(y_d_o, y_w_o, y_m_o, y_q_o, aux, Nr, Np);
 

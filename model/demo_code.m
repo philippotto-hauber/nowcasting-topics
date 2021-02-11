@@ -165,10 +165,13 @@ ind_q_o = f_ind_o(Xi_qd);
 y_q_o = NaN(Nq, Nt);y_q_o(:, ind_q_o) = y_q(:, ind_q_o);
 
 % randomly set some daily series to NaN
-for n = 1:Nd
-    ind_nan = randsample(Nt, 3000);
-    y_d_o(n, ind_nan) = NaN;
-end    
+% for n = 1:Nd
+%     ind_nan = randsample(Nt, 3000);
+%     y_d_o(n, ind_nan) = NaN;
+% end    
+
+% set entire days to NaN
+y_d_o(:, Nt-10:Nt-5) = NaN; 
 
 % set last two quarterly obs to NaN
 y_q_o(:, ind_q_o(end-1:end)) = NaN;

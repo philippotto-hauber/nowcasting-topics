@@ -110,7 +110,7 @@ f_outl <- function(y, aalpha)
 
 sample_start <- c("1995-01-01")
 vintage <- c("2010-01-30") # requires backcast!
-date_h <- c("2010-06-30") # 2010Q2
+date_h <- c("2010-09-30") # 2010Q2
 Ntopics <- 10 # select Ntopics topics that have the highest correlation with quarterly GDP growth
 K = 60 # window of moving average
 bw = 1200 # bandwidth for biweight filter
@@ -232,7 +232,7 @@ df_gdp %>%
   mutate(year = as.numeric(substr(date, 1, 4)), 
          month = as.numeric(substr(date, 6, 7))+2,  
          quarter = ceiling(month/3),
-         date_tmp = make_date(year = year, month = ifelse(month+1>12,1,month+1), day = 1),
+         date_tmp = make_date(year = ifelse(month+1>12,year+1, year), month = ifelse(month+1>12,1,month+1), day = 1),
          date = date_tmp - days(1),
          day = day(date)# middle of the quarter, e.g. 15.2. for Q1
         )-> df_gdp
@@ -332,11 +332,87 @@ for (y in years)
 # cbind to df
 df_gdp <- cbind(df_gdp, select(df_W_qd, W_qd_c, W_qd_p))
 
-# EXPORT TO CSV
+# EXPORT TO CSV ----
 #_____________________________________________________#
+#_indices for back-, now- and forecasts
 #_merge datasets
-#_mark back-, now- and forecasts
 #_change var names
 #_____________________________________________________#
 
-# set value of GDP for back 
+# indices for back-, now- and forecasts
+
+df_gdp %>% 
+  group_by(year, quarter) %>%
+  filter(date == max(date),
+         is.na(d_gdp)) %>%
+  ungroup() %>%
+  select(date) -> dates_fore
+
+diff_q <- floor(as.numeric(dates_fore[, 1, drop = T] - as.Date(vintage)) / 90)
+
+# ind_backcast <- mat.or.vec(nrow(df_gdp), 1)
+# ind_nowcast <- mat.or.vec(nrow(df_gdp), 1)
+# ind_forecast <- mat.or.vec(nrow(df_gdp), sum(diff_q > 0))
+# if (!is.null(dim(ind_forecast))) # more than 1 forecast
+#   counter_col <- 1
+
+df_ind <- data.frame()
+counter_fore <- 1
+for (i in seq(1, nrow(dates_fore)))
+{
+    if (diff_q[i] == -1)
+    {
+        name <- "ind_backcast"
+    } else if (diff_q[i] == 0)
+    {
+        name <- "ind_nowcast"
+    } else {
+      name <- paste0("ind_forecast", counter_fore, "Q")
+      counter_fore <- counter_fore + 1
+    }
+    vals <- mat.or.vec(nrow(df_gdp), 1)
+    vals[df_gdp$date == dates_fore[i, , drop = T]] <- 1
+    
+    df_ind <- rbind(df_ind, data.frame(name = name, vals = vals, date = df_gdp$date))
+}
+
+pivot_wider(df_ind, names_from = name, values_from = vals) -> df_ind_wide
+
+# for (i in seq(1, nrow(dates_fore)))
+# {
+#   if (diff_q[i] == -1)
+#   {
+#       ind_backcast[df_gdp$date == dates_fore[i, , drop = T]] <- 1
+#   } else if (diff_q[i] == 0)
+#   {
+#       ind_nowcast[df_gdp$date == dates_fore[i, , drop = T]] <- 1
+#   } else {
+#       if (!is.null(dim(ind_forecast)))
+#       {
+#       ind_forecast[df_gdp$date == dates_fore[i, , drop = T], counter_col] <- 1
+#       counter_col <- counter_col + 1
+#       } else
+#       {
+#         ind_forecast[df_gdp$date == dates_fore[i, , drop = T]] <- 1
+#       }
+#   }
+# }
+
+df_gdp <- merge(df_gdp, df_ind_wide, by = "date")
+
+# merge data sets
+df_data <- merge(df_topics_trafo, df_gdp, by = c("date", "year", "quarter", "month", "day"))
+
+# change var names
+ind_q <- grepl("d_gdp", names(df_data))
+Nq <- sum(ind_q)
+names(df_data)[ind_q] <- paste0("y_q_", seq(1, Nq))
+
+ind_d <- grepl("T.", names(df_data))
+Nd <- sum(ind_d)
+names(df_data)[ind_d] <- paste0("y_d_", seq(1, Nd))
+
+# export to csv
+write.csv(df_data, file = paste0("vint_", year(vintage), "_", month(vintage), "_", day(vintage), ".csv"),
+          row.names = F,
+          na = "NaN")

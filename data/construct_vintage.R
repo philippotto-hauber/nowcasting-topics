@@ -217,8 +217,8 @@ lines(df_topics_trafo$date, df_topics_trafo[, 7], type = "l", col = "red")
 
 # DOWNLOAD GDP DATA ----
 
-# get vintages from Bundesbank real-time database
-df_gdp <- getSeries("BBKRT.Q.DE.Y.A.AG1.CA010.A.I") # calendar and seasonally adjusted GDP
+# load from file
+df_gdp <- load("vintages_gdp.Rda")
 
 # select vintage
 dates_vintages <- as.Date(names(df_gdp))

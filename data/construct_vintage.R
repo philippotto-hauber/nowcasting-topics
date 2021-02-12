@@ -336,6 +336,7 @@ df_gdp <- cbind(df_gdp, select(df_W_qd, W_qd_c, W_qd_p))
 #_____________________________________________________#
 #_indices for back-, now- and forecasts
 #_merge datasets
+#_add flag indicating estimation sample 1:Nt
 #_change var names
 #_____________________________________________________#
 
@@ -378,30 +379,10 @@ for (i in seq(1, nrow(dates_fore)))
 
 pivot_wider(df_ind, names_from = name, values_from = vals) -> df_ind_wide
 
-# for (i in seq(1, nrow(dates_fore)))
-# {
-#   if (diff_q[i] == -1)
-#   {
-#       ind_backcast[df_gdp$date == dates_fore[i, , drop = T]] <- 1
-#   } else if (diff_q[i] == 0)
-#   {
-#       ind_nowcast[df_gdp$date == dates_fore[i, , drop = T]] <- 1
-#   } else {
-#       if (!is.null(dim(ind_forecast)))
-#       {
-#       ind_forecast[df_gdp$date == dates_fore[i, , drop = T], counter_col] <- 1
-#       counter_col <- counter_col + 1
-#       } else
-#       {
-#         ind_forecast[df_gdp$date == dates_fore[i, , drop = T]] <- 1
-#       }
-#   }
-# }
-
 df_gdp <- merge(df_gdp, df_ind_wide, by = "date")
 
 # merge data sets
-df_data <- merge(df_topics_trafo, df_gdp, by = c("date", "year", "quarter", "month", "day"))
+df_data <- merge(df_topics_trafo, df_gdp, by = c("date", "year", "quarter", "month", "day"), all = T)
 
 # change var names
 ind_q <- grepl("d_gdp", names(df_data))
@@ -411,6 +392,9 @@ names(df_data)[ind_q] <- paste0("y_q_", seq(1, Nq))
 ind_d <- grepl("T.", names(df_data))
 Nd <- sum(ind_d)
 names(df_data)[ind_d] <- paste0("y_d_", seq(1, Nd))
+
+# add flag for estimation sample
+df_data$ind_sample <- ifelse(df_data$date <= vintage, 1, 0)
 
 # export to csv
 write.csv(df_data, file = paste0("vint_", year(vintage), "_", month(vintage), "_", day(vintage), ".csv"),

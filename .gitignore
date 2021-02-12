@@ -9,3 +9,6 @@
 
 # ignore asv files
 *.asv
+
+# ignore Rda files
+*.Rda

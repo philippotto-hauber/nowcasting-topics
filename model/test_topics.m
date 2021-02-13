@@ -43,6 +43,7 @@ aux.W_qd_c = tmp.data(:, find(strcmp('"W_qd_c"', tmp.textdata(1,:))) - offset_nu
 % inds for back-, now- and forecasts
 ind_backcast = logical(tmp.data(:, find(strcmp('"ind_backcast"', tmp.textdata(1,:))) - offset_numcols));
 ind_nowcast = logical(tmp.data(:, find(strcmp('"ind_nowcast"', tmp.textdata(1,:))) - offset_numcols));
+ind_forecast = logical(tmp.data(:, find(strcmp('"ind_forecast1Q"', tmp.textdata(1,:))) - offset_numcols));
 
 %-------------------------------------------------------------------------%
 % prepare data for estimation
@@ -52,9 +53,11 @@ ind_nowcast = logical(tmp.data(:, find(strcmp('"ind_nowcast"', tmp.textdata(1,:)
 
 % standardize
 y_d_stand = (y_d - nanmean(y_d, 2)) ./ nanstd(y_d, [], 2);
+y_d_fore_stand = (y_d_fore - nanmean(y_d, 2)) ./ nanstd(y_d, [], 2);
 mean_gdp = nanmean(y_q);
 std_gdp = nanstd(y_q);
 y_q_stand = (y_q - mean_gdp) / std_gdp; 
+y_q_fore_stand = (y_q_fore - mean_gdp) / std_gdp; 
 
 % starting values
 params = f_start_vals(y_d_stand, [], [], y_q_stand, aux, Nr, Np);
@@ -70,3 +73,34 @@ params = f_EMalg(y_d, [], [], y_q, aux, params);
 %-------------------------------------------------------------------------%
 % run KF/KS to get back-, now- and forecasts
 %-------------------------------------------------------------------------%
+
+% - Kalman Smoother
+% ---------------------------    
+dat = [[y_d_stand y_d_fore_stand]; [y_q_stand y_q_fore_stand]]; 
+[Z, H, T, R, Q] = f_state_space_params(params, aux, size(dat, 2));
+s0 = zeros(size(T,1),1); 
+P0 = 1 * eye(size(T,1)); 
+[stT, ~, ~] = f_KS_DK_logL(dat,T,Z,H,R,Q,s0,P0);
+
+figure;
+plot(stT(1:Nr,:)')
+title('daily factors')
+
+
+gdp_hat_stand = params.lam_q_flow * stT(end-2*Nr+1:end-Nr,:);
+gdp_hat = gdp_hat_stand * std_gdp + mean_gdp;
+Nt = sum(aux.ind_sample); 
+Nh = length(aux.ind_sample) - Nt; 
+gdp_fore = NaN(1, Nt+Nh); 
+gdp_fore(1, ind_backcast) = gdp_hat(1, ind_backcast); 
+gdp_fore(1, ind_nowcast) = gdp_hat(1, ind_nowcast); 
+gdp_fore(1, ind_forecast) = gdp_hat(1, ind_forecast); 
+gdp_fore(1, end) = gdp_hat(1, end);
+
+figure; 
+plot([gdp_hat(:, 1: sum(aux.ind_sample)) NaN(1, Nh)]', 'b-')
+hold on
+plot([y_q, NaN(1, Nh)]', 'bo')
+plot([NaN(1, Nt), gdp_hat(:, sum(aux.ind_sample)+1:end)]', 'r-')
+plot(gdp_fore', 'ro')
+title('quarterly GDP growth (ann.) and forecasts')

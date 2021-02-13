@@ -1,4 +1,4 @@
-function [Z, H, T, R, Q] = f_state_space_params(params, aux)
+function [Z, H, T, R, Q] = f_state_space_params(params, aux, Nt)
 
 % back out dimensions of state space system
 Nd = size(params.lam_d, 1);
@@ -11,7 +11,6 @@ Nq_stock = size(params.lam_q_stock, 1);
 Nq = Nq_flow + Nq_stock;
 Nr = size(params.Phi, 1);
 Np_eff = size(params.Phi, 2)/Nr + 1;
-Nt = sum(aux.ind_sample); 
 
 % determine size of state vector Ns
 Ns = Nr * Np_eff;  

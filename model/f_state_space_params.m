@@ -11,7 +11,7 @@ Nq_stock = size(params.lam_q_stock, 1);
 Nq = Nq_flow + Nq_stock;
 Nr = size(params.Phi, 1);
 Np_eff = size(params.Phi, 2)/Nr + 1;
-Nt = size(aux.Xi_md, 1); 
+Nt = sum(aux.ind_sample); 
 
 % determine size of state vector Ns
 Ns = Nr * Np_eff;  

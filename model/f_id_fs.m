@@ -30,8 +30,9 @@ if Nm > 0 && (Nw > 0 || Nd > 0)
        id_f_m_stock = ind_s+1 : ind_s+Nr;
        ind_s = ind_s+Nr; 
    end
-elseif (Nm > 0 && Nw == 0 && Nd == 0) || Nm ==0 % m is highest frequency, no distinction required between stocks and flows
-   id_f_m = [];
+elseif (Nm > 0 && Nw == 0 && Nd == 0) || Nm == 0 % m is highest frequency, no distinction required between stocks and flows
+   id_f_m_flow = [];
+   id_f_m_stock = [];
 end
 
 if Nq_flow > 0

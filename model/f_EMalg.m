@@ -25,15 +25,13 @@ for iter = 1 : maxiter
     % - E-Step ---------------------------------------------------------- %
     % ------------------------------------------------------------------- %
 
-    % - state space formulation
-    % ---------------------------
-    [Z, H, T, R, Q] = f_state_space_params(params, aux);
-
     % - Kalman Smoother
     % ---------------------------    
-    s0 = zeros(size(T,1),1) ; 
-    P0 = 1 * eye(size(T,1)) ; 
-    [stT,PtT,LL] = f_KS_DK_logL([y_d; y_w; y_m; y_q],T,Z,H,R,Q,s0,P0) ;
+    dat = [y_d; y_w; y_m; y_q];
+    [Z, H, T, R, Q] = f_state_space_params(params, aux, size(dat, 2));
+    s0 = zeros(size(T,1),1); 
+    P0 = 1 * eye(size(T,1)); 
+    [stT,PtT,LL] = f_KS_DK_logL(dat,T,Z,H,R,Q,s0,P0) ;
     
     % - check convergence
     % ---------------------------  

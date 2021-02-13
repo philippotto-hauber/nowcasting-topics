@@ -1,13 +1,22 @@
 function params = f_start_vals(y_d, y_w, y_m, y_q, aux, Nr, Np)
 
 %-----------------------------------%
+%- back out dims
+%-----------------------------------%
+Nd = size(y_d, 1); 
+Nw = size(y_w, 1); 
+Nm = size(y_m, 1); 
+Nq = size(y_q, 1); 
+Nt = size(y_d, 2); 
+
+%-----------------------------------%
 %- Phi, Omeg
 %-----------------------------------%
 
 % interpolate missings in y_d_o
 y_d_star = y_d;
-for t = 2 : size(y_d, 2)-1
-    for i = 1 : size(y_d, 1)
+for t = 2 : Nt-1
+    for i = 1 : Nd
         if isnan(y_d_star(i, t))
             ind_nextobs = 1;
             t_NaN = true;
@@ -53,44 +62,79 @@ end
 %- lam_d, sig2_d
 %-----------------------------------%
 
-% lam_d, sig2_d
-[params.lam_d, params.sig2_d] = f_ols(y_d_star, f, true);
-
+if Nd > 0
+    % lam_d, sig2_d
+    [params.lam_d, params.sig2_d] = f_ols(y_d_star, f, true);
+else
+    params.lam_d = []; 
+    params.sig2_d = [];
+end    
 %-----------------------------------%
 %- lam_w, sig2_w
 %-----------------------------------%
 
-% cumulate factors for weekly stocks
-[f_w, ~] = f_cum_f(f, aux.Xi_wd, zeros(size(aux.Xi_wd)), zeros(size(aux.Xi_wd)));
+if Nw > 0
+    % cumulate factors for weekly stocks
+    [f_w, ~] = f_cum_f(f, aux.Xi_wd, zeros(size(aux.Xi_wd)), zeros(size(aux.Xi_wd)));
 
-% lam_w and sig2_w
-[params.lam_w, params.sig2_w] = f_ols(y_w, f_w, true);
+    % lam_w and sig2_w
+    [params.lam_w, params.sig2_w] = f_ols(y_w, f_w, true);
+else
+    params.lam_w = []; 
+    params.sig2_w = [];
+end
 
 %-----------------------------------%
 %- lam_m, sig2_m
 %-----------------------------------%
 
-% cumulate factors for monthly stocks and flows
-[f_m, f_m_c] = f_cum_f(f, aux.Xi_md, aux.W_md_c, aux.W_md_p);
+if Nm > 0
+    % cumulate factors for monthly stocks and flows
+    [f_m, f_m_c] = f_cum_f(f, aux.Xi_md, aux.W_md_c, aux.W_md_p);
 
-% lam_m_stock and sig2_m_stock
-[params.lam_m_stock, params.sig2_m_stock] = f_ols(y_m(~aux.ind_m_flow, :), f_m, true);
+    % lam_m_stock and sig2_m_stock
+    [params.lam_m_stock, params.sig2_m_stock] = f_ols(y_m(~aux.ind_m_flow, :), f_m, true);
 
-% lam_m_stock and sig2_m_stock
-[params.lam_m_flow, params.sig2_m_flow] = f_ols(y_m(aux.ind_m_flow, :), f_m_c, true);
+    % lam_m_stock and sig2_m_stock
+    [params.lam_m_flow, params.sig2_m_flow] = f_ols(y_m(aux.ind_m_flow, :), f_m_c, true);
+
+    % combine into one, ordering flows first! 
+    params.lam_m = [params.lam_m_flow; params.lam_m_stock]; 
+    params.sig2_m = [params.sig2_m_flow; params.sig2_m_stock]; 
+else
+    params.lam_m_flow = []; 
+    params.sig2_m_flow = [];
+    params.lam_m_stock = []; 
+    params.sig2_m_stock = [];
+    params.lam_m = []; 
+    params.sig2_m = [];
+end
 
 %-----------------------------------%
 %- lam_q, sig2_q
 %-----------------------------------%
 
-% cumulate factors for quarterly stocks and flows
-[f_q, f_q_c] = f_cum_f(f, aux.Xi_qd, aux.W_qd_c, aux.W_qd_p);
+if Nq > 0
+    % cumulate factors for quarterly stocks and flows
+    [f_q, f_q_c] = f_cum_f(f, aux.Xi_qd, aux.W_qd_c, aux.W_qd_p);
 
-% lam_q_stock and sig2_q_stock
-[params.lam_q_stock, params.sig2_q_stock] = f_ols(y_q(~aux.ind_q_flow, :), f_q, true);
+    % lam_q_stock and sig2_q_stock
+    [params.lam_q_stock, params.sig2_q_stock] = f_ols(y_q(~aux.ind_q_flow, :), f_q, true);
 
-% lam_q_flow and sig2_q_flow
-[params.lam_q_flow, params.sig2_q_flow] = f_ols(y_q(aux.ind_q_flow, :), f_q_c, true);
+    % lam_q_flow and sig2_q_flow
+    [params.lam_q_flow, params.sig2_q_flow] = f_ols(y_q(aux.ind_q_flow, :), f_q_c, true);
+    
+    % combine into one, ordering flows first! 
+    params.lam_q = [params.lam_q_flow; params.lam_q_stock]; 
+    params.sig2_q = [params.sig2_q_flow; params.sig2_q_stock];
+else
+    params.lam_q_flow = []; 
+    params.sig2_q_flow = [];
+    params.lam_q_stock = []; 
+    params.sig2_q_stock = [];
+    params.lam_q = []; 
+    params.sig2_q = [];
+end
 end
 
 %-----------------------------------%

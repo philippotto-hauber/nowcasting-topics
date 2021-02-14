@@ -10,8 +10,8 @@ clear; close all; clc;
 %-------------------------------------------------------------------------%
 filename = 'vint_2010_1_30.csv';
 dirname = '..\data\';
-Nr = 3;
-Np = 10;
+Nr = 2;
+Np = 6;
 
 %-------------------------------------------------------------------------%
 % load data
@@ -26,6 +26,7 @@ aux.ind_sample = logical(tmp.data(:, find(strcmp('"ind_sample"', tmp.textdata(1,
 
 % daily data
 ind_y_d = find(contains(tmp.textdata(1,:), '"y_d_')) - offset_numcols;
+ind_y_d = setdiff(ind_y_d, ind_y_d([6, 9, 23])); % manually remove T05, T07, T21
 y_d = tmp.data(aux.ind_sample, ind_y_d)';
 y_d_fore = tmp.data(~aux.ind_sample, ind_y_d)';
 
@@ -49,8 +50,6 @@ ind_forecast = logical(tmp.data(:, find(strcmp('"ind_forecast1Q"', tmp.textdata(
 % prepare data for estimation
 %-------------------------------------------------------------------------%
 
-% back out dims ?!
-
 % standardize
 y_d_stand = (y_d - nanmean(y_d, 2)) ./ nanstd(y_d, [], 2);
 y_d_fore_stand = (y_d_fore - nanmean(y_d, 2)) ./ nanstd(y_d, [], 2);
@@ -58,6 +57,8 @@ mean_gdp = nanmean(y_q);
 std_gdp = nanstd(y_q);
 y_q_stand = (y_q - mean_gdp) / std_gdp; 
 y_q_fore_stand = (y_q_fore - mean_gdp) / std_gdp; 
+
+movie_plot_topics(y_d_stand, y_q_stand)
 
 % starting values
 params = f_start_vals(y_d_stand, [], [], y_q_stand, aux, Nr, Np);
@@ -121,4 +122,4 @@ p3 = plot(acts, 'kx');
 xticks(ind_plot(1:5:end))
 xticklabels(dates_plot(1:5:end))
 legend([p1, p2, p3], {'in-sample', 'out-of-sample', 'actual'}, 'Location','SouthWest')
-title('quarterly GDP growth (ann.) and forecasts')
+title('quarterly GDP growth (ann.), forecasts and actuals')

@@ -11,7 +11,7 @@ clear; close all; clc;
 filename = 'vint_2010_1_30.csv';
 dirname = '..\data\';
 Nr = 2;
-Np = 6;
+Np = 1;
 
 %-------------------------------------------------------------------------%
 % load data
@@ -29,6 +29,8 @@ ind_y_d = find(contains(tmp.textdata(1,:), 'y_d_')) - offset_numcols;
 ind_y_d = setdiff(ind_y_d, ind_y_d([6, 9, 23])); % manually remove T05, T07, T21
 y_d = tmp.data(aux.ind_sample, ind_y_d)';
 y_d_fore = tmp.data(~aux.ind_sample, ind_y_d)';
+
+y_d = f_interpol(y_d); % linearly interpolate so that there are no missings!
 
 % quarterly data
 ind_y_q = find(contains(tmp.textdata(1,:), 'y_q_')) - offset_numcols;
@@ -121,3 +123,7 @@ xticks(ind_plot(1:5:end))
 xticklabels(dates_plot(1:5:end))
 legend([p1, p2, p3], {'in-sample', 'out-of-sample', 'actual'}, 'Location','SouthWest')
 title('quarterly GDP growth (ann.), forecasts and actuals')
+
+
+
+

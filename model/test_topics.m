@@ -22,29 +22,29 @@ tmp = importdata([dirname, filename]);
 offset_numcols = size(tmp.textdata, 2) - size(tmp.data, 2);
 
 % back out data for estimation and forecasting
-aux.ind_sample = logical(tmp.data(:, find(strcmp('"ind_sample"', tmp.textdata(1,:))) - offset_numcols));
+aux.ind_sample = logical(tmp.data(:, find(strcmp('ind_sample', tmp.textdata(1,:))) - offset_numcols));
 
 % daily data
-ind_y_d = find(contains(tmp.textdata(1,:), '"y_d_')) - offset_numcols;
+ind_y_d = find(contains(tmp.textdata(1,:), 'y_d_')) - offset_numcols;
 ind_y_d = setdiff(ind_y_d, ind_y_d([6, 9, 23])); % manually remove T05, T07, T21
 y_d = tmp.data(aux.ind_sample, ind_y_d)';
 y_d_fore = tmp.data(~aux.ind_sample, ind_y_d)';
 
 % quarterly data
-ind_y_q = find(contains(tmp.textdata(1,:), '"y_q_')) - offset_numcols;
+ind_y_q = find(contains(tmp.textdata(1,:), 'y_q_')) - offset_numcols;
 y_q = tmp.data(aux.ind_sample, ind_y_q)';
 y_q_fore = tmp.data(~aux.ind_sample, ind_y_q)';
 aux.ind_q_flow = 1; 
 
 % weights and Xi
-aux.Xi_qd = tmp.data(:, find(strcmp('"Xi_qd"', tmp.textdata(1,:))) - offset_numcols);
-aux.W_qd_p = tmp.data(:, find(strcmp('"W_qd_p"', tmp.textdata(1,:))) - offset_numcols);
-aux.W_qd_c = tmp.data(:, find(strcmp('"W_qd_c"', tmp.textdata(1,:))) - offset_numcols);
+aux.Xi_qd = tmp.data(:, find(strcmp('Xi_qd', tmp.textdata(1,:))) - offset_numcols);
+aux.W_qd_p = tmp.data(:, find(strcmp('W_qd_p', tmp.textdata(1,:))) - offset_numcols);
+aux.W_qd_c = tmp.data(:, find(strcmp('W_qd_c', tmp.textdata(1,:))) - offset_numcols);
 
 % inds for back-, now- and forecasts
-ind_backcast = logical(tmp.data(:, find(strcmp('"ind_backcast"', tmp.textdata(1,:))) - offset_numcols));
-ind_nowcast = logical(tmp.data(:, find(strcmp('"ind_nowcast"', tmp.textdata(1,:))) - offset_numcols));
-ind_forecast = logical(tmp.data(:, find(strcmp('"ind_forecast1Q"', tmp.textdata(1,:))) - offset_numcols));
+ind_backcast = logical(tmp.data(:, find(strcmp('ind_backcast', tmp.textdata(1,:))) - offset_numcols));
+ind_nowcast = logical(tmp.data(:, find(strcmp('ind_nowcast', tmp.textdata(1,:))) - offset_numcols));
+ind_forecast = logical(tmp.data(:, find(strcmp('ind_forecast1Q', tmp.textdata(1,:))) - offset_numcols));
 
 %-------------------------------------------------------------------------%
 % prepare data for estimation
@@ -57,8 +57,6 @@ mean_gdp = nanmean(y_q);
 std_gdp = nanstd(y_q);
 y_q_stand = (y_q - mean_gdp) / std_gdp; 
 y_q_fore_stand = (y_q_fore - mean_gdp) / std_gdp; 
-
-movie_plot_topics(y_d_stand, y_q_stand)
 
 % starting values
 params = f_start_vals(y_d_stand, [], [], y_q_stand, aux, Nr, Np);

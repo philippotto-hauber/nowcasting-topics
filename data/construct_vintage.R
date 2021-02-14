@@ -399,4 +399,5 @@ df_data$ind_sample <- ifelse(df_data$date <= vintage, 1, 0)
 # export to csv
 write.csv(df_data, file = paste0("vint_", year(vintage), "_", month(vintage), "_", day(vintage), ".csv"),
           row.names = F,
+          quote = F,
           na = "NaN")

@@ -13,33 +13,11 @@ Nt = size(y_d, 2);
 %- Phi, Omeg
 %-----------------------------------%
 
-% interpolate missings in y_d_o
-y_d_star = y_d;
-for t = 2 : Nt-1
-    for i = 1 : Nd
-        if isnan(y_d_star(i, t))
-            ind_nextobs = 1;
-            t_NaN = true;
-            while t_NaN
-                if isnan(y_d_star(i, t+ind_nextobs))
-                    ind_nextobs = ind_nextobs + 1;
-                else
-                    t_NaN = false;
-                end
-            end
-            y_d_star(i, t) = 0.5 * (y_d_star(i, t-1) + y_d_star(i, t+ind_nextobs));
-        end
-    end
-end
-
-if any(isnan(y_d(:, 1)))
-    ind_nan = isnan(y_d(:, 1));
-    y_d_star(ind_nan, 1) = y_d_star(ind_nan, 2);
-end
-
-if any(isnan(y_d(:, end)))
-    ind_nan = isnan(y_d(:, end));
-    y_d_star(ind_nan, end) = y_d_star(ind_nan, end-1);
+% check for missings and interpolate if need be!
+if any(isnan(y_d))
+    y_d_star = f_interpol(y_d);
+else
+    y_d_star = y_d;
 end
 
 % initial PCA estimate of daily factors 

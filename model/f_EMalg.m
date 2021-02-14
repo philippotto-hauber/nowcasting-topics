@@ -16,6 +16,9 @@ Nr = size(params.Phi, 1);
 Np_eff = size(params.Phi, 2)/Nr + 1;
 Nt = size(aux.Xi_qd, 1); 
 
+% get positions of factors in state vector
+[id_f, id_f_lags, id_f_d, id_f_w, id_f_m_flow, id_f_m_stock, id_f_q_flow, id_f_q_stock] = f_id_fs(Nr, Np_eff, Nd, Nw, Nm_flow, Nm_stock, Nq_flow, Nq_stock);
+
 % iterations
 maxiter = 50; 
 LL_prev = -999999 ; 
@@ -43,9 +46,6 @@ for iter = 1 : maxiter
     % - M-Step ---------------------------------------------------------- %
     % ------------------------------------------------------------------- %
     
-    % get positions of factors in state vector
-    [id_f, id_f_lags, id_f_d, id_f_w, id_f_m_flow, id_f_m_stock, id_f_q_flow, id_f_q_stock] = f_id_fs(Nr, Np_eff, Nd, Nw, Nm_flow, Nm_stock, Nq_flow, Nq_stock);
-
     % lam_d and sig_d
     if Nd > 0
         [params.lam_d, params.sig_d] = f_sample_lam_sig(y_d, stT(id_f_d, :), PtT(id_f_d, id_f_d, :), params.sig2_d);

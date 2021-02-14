@@ -10,8 +10,8 @@ clear; close all; clc;
 %-------------------------------------------------------------------------%
 filename = 'vint_2010_1_30.csv';
 dirname = '..\data\';
-Nr = 2;
-Np = 3;
+Nr = 3;
+Np = 10;
 
 %-------------------------------------------------------------------------%
 % load data
@@ -74,8 +74,7 @@ params = f_EMalg(y_d, [], [], y_q, aux, params);
 % run KF/KS to get back-, now- and forecasts
 %-------------------------------------------------------------------------%
 
-% - Kalman Smoother
-% ---------------------------    
+  
 dat = [[y_d_stand y_d_fore_stand]; [y_q_stand y_q_fore_stand]]; 
 [Z, H, T, R, Q] = f_state_space_params(params, aux, size(dat, 2));
 s0 = zeros(size(T,1),1); 
@@ -86,6 +85,9 @@ figure;
 plot(stT(1:Nr,:)')
 title('daily factors')
 
+%-------------------------------------------------------------------------%
+% plot daily q-o-q growth along with actuals 
+%-------------------------------------------------------------------------%
 
 gdp_hat_stand = params.lam_q_flow * stT(end-2*Nr+1:end-Nr,:);
 gdp_hat = gdp_hat_stand * std_gdp + mean_gdp;
@@ -97,10 +99,26 @@ gdp_fore(1, ind_nowcast) = gdp_hat(1, ind_nowcast);
 gdp_fore(1, ind_forecast) = gdp_hat(1, ind_forecast); 
 gdp_fore(1, end) = gdp_hat(1, end);
 
+% actuals
+acts = NaN(1, length(aux.ind_sample));
+acts(1, ind_backcast) = -0.04;
+acts(1, ind_nowcast) = 0.64;
+acts(1, ind_forecast) = 9.1;
+acts(1, end) = 2.8;
+
+% back out dates for plot
+ind_plot = find(tmp.data(:, 2) == 1 & tmp.data(:, 3) == 1 & tmp.data(:, 4) == 1);
+dates_plot = tmp.data(ind_plot, 1); 
+
+
 figure; 
 plot([gdp_hat(:, 1: sum(aux.ind_sample)) NaN(1, Nh)]', 'b-')
 hold on
-plot([y_q, NaN(1, Nh)]', 'bo')
+p1 = plot([y_q, NaN(1, Nh)]', 'bo');
 plot([NaN(1, Nt), gdp_hat(:, sum(aux.ind_sample)+1:end)]', 'r-')
-plot(gdp_fore', 'ro')
+p2 = plot(gdp_fore', 'ro');
+p3 = plot(acts, 'kx');
+xticks(ind_plot(1:5:end))
+xticklabels(dates_plot(1:5:end))
+legend([p1, p2, p3], {'in-sample', 'out-of-sample', 'actual'}, 'Location','SouthWest')
 title('quarterly GDP growth (ann.) and forecasts')

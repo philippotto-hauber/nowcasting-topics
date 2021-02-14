@@ -68,13 +68,11 @@ params = f_start_vals(y_d_stand, [], [], y_q_stand, aux, Nr, Np);
 %-------------------------------------------------------------------------%
 
 params_init = params; 
-params = f_EMalg(y_d, [], [], y_q, aux, params); 
-
+params = f_EMalg(y_d_stand, [], [], y_q_stand, aux, params); 
 
 %-------------------------------------------------------------------------%
 % run KF/KS to get back-, now- and forecasts
 %-------------------------------------------------------------------------%
-
   
 dat = [[y_d_stand y_d_fore_stand]; [y_q_stand y_q_fore_stand]]; 
 [Z, H, T, R, Q] = f_state_space_params(params, aux, size(dat, 2));
@@ -86,6 +84,10 @@ figure;
 plot(stT(1:Nr,:)')
 title('daily factors')
 
+figure;
+plot(stT(end-2*Nr+1:end-Nr,:)')
+title('f_q: cumulated daily factors')
+
 %-------------------------------------------------------------------------%
 % plot daily q-o-q growth along with actuals 
 %-------------------------------------------------------------------------%
@@ -93,7 +95,7 @@ title('daily factors')
 gdp_hat_stand = params.lam_q_flow * stT(end-2*Nr+1:end-Nr,:);
 gdp_hat = gdp_hat_stand * std_gdp + mean_gdp;
 Nt = sum(aux.ind_sample); 
-Nh = length(aux.ind_sample) - Nt; 
+Nh = length(aux.ind_sample) - Nt; % sum(aux.ind_sample == 0)
 gdp_fore = NaN(1, Nt+Nh); 
 gdp_fore(1, ind_backcast) = gdp_hat(1, ind_backcast); 
 gdp_fore(1, ind_nowcast) = gdp_hat(1, ind_nowcast); 

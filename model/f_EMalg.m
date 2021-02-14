@@ -35,6 +35,7 @@ for iter = 1 : maxiter
     s0 = zeros(size(T,1),1); 
     P0 = 1 * eye(size(T,1)); 
     [stT,PtT,LL] = f_KS_DK_logL(dat,T,Z,H,R,Q,s0,P0) ;
+    %figure;plot(stT(1:Nr,:)'); title(['iter ' num2str(iter)]);
     
     % - check convergence
     % ---------------------------  

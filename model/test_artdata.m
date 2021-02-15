@@ -20,13 +20,13 @@ clear; close all; clc;
 %-------------------------------------------------------------------------%
 
 % set-up
-Nd = 20; % # of daily series  
-Nw = 10; % # of weekly series
-Nm = 6; % # of monthly series
+Nd = 3; % # of daily series  
+Nw = 0; % # of weekly series
+Nm = 2; % # of monthly series
 Nm_flow = Nm / 2; % # of quarterly flow series
 Nm_stock = Nm - Nm_flow; % # of quarterly stock series
 ind_m_flow = [repelem(true, Nm_flow), repelem(false, Nm_stock)];
-Nq = 6; % # of quarterly series
+Nq = 2; % # of quarterly series
 Nq_flow = Nq / 2; % # of quarterly flow series
 Nq_stock = Nq - Nq_flow; % # of quarterly stock series
 ind_q_flow = [repelem(true, Nq_flow), repelem(false, Nq_stock)];
@@ -77,10 +77,13 @@ sig2_q = 0.2 + unifrnd(0.0, 0.2, Nq, 1);
 switch Np
     case 1
         Phi = 0.5 * eye(Nr);
+        Phi(1,2) = -0.4;
     case 2
         Phi = [0.5 * eye(Nr), -0.2 * eye(Nr)];
+        Phi(1,2) = -0.4;
     case 3
         Phi = [0.3 * eye(Nr), -0.4 * eye(Nr), 0.1 * eye(Nr)];
+        Phi(1,2) = +0.3;
     otherwise
         error('Np has to smaller than or equal to 3!')
 end
@@ -157,27 +160,26 @@ f = F(1:Nr, :);
 
 % extract actually observed monthly and quarterly values
 y_d_o = y_d;
-ind_w_o = f_ind_o(Xi_wd);
-y_w_o = NaN(Nw, Nt);y_w_o(:, ind_w_o) = y_w(:, ind_w_o);
-ind_m_o = f_ind_o(Xi_md);
-y_m_o = NaN(Nm, Nt);y_m_o(:, ind_m_o) = y_m(:, ind_m_o);
-ind_q_o = f_ind_o(Xi_qd);
-y_q_o = NaN(Nq, Nt);y_q_o(:, ind_q_o) = y_q(:, ind_q_o);
+if Nw > 0
+    ind_w_o = f_ind_o(Xi_wd);
+    y_w_o = NaN(Nw, Nt);y_w_o(:, ind_w_o) = y_w(:, ind_w_o);
+else
+    y_w_o = []; 
+end
 
-% randomly set some daily series to NaN
-% for n = 1:Nd
-%     ind_nan = randsample(Nt, 3000);
-%     y_d_o(n, ind_nan) = NaN;
-% end    
+if Nm > 0
+    ind_m_o = f_ind_o(Xi_md);
+    y_m_o = NaN(Nm, Nt);y_m_o(:, ind_m_o) = y_m(:, ind_m_o);
+else
+    y_m_o = [];
+end
 
-% set entire days to NaN
-y_d_o(:, Nt-10:Nt-5) = NaN; 
-
-% set last two quarterly obs to NaN
-y_q_o(:, ind_q_o(end-1:end)) = NaN;
-
-% set last two monthly obs to NaN for some series
-y_m_o([1, 4], ind_m_o(end-1:end)) = NaN; 
+if Nq > 0
+    ind_q_o = f_ind_o(Xi_qd);
+    y_q_o = NaN(Nq, Nt);y_q_o(:, ind_q_o) = y_q(:, ind_q_o);
+else
+    y_q_o = []; 
+end
 
 % plot factors and obs
 figure; 
@@ -203,36 +205,39 @@ xticks(ind_plot(5:5:end))
 xticklabels(dates_plot(5:5:end))
 title('Simulated observations')
 
-figure;
-y_m_flow = y_m(ind_m_flow, :);
-p1 = plot(y_m_flow(1, :)', '-', 'Color', [0, 0.4470, 0.7410, 0.7]); 
-hold on; 
-plot(y_m_flow(2:end, :)', '-', 'Color', [0, 0.4470, 0.7410, 0.7]); 
-y_m_stock = y_m(~ind_m_flow, :);
-p2 = plot(y_m_stock(1, :)', '-', 'Color', [0.8500, 0.3250, 0.0980, 0.7]);
-hold on
-plot(y_m_stock(2:end, :)', '-', 'Color', [0.8500, 0.3250, 0.0980, 0.7]);
-xticks(ind_plot(5:5:end))
-xticklabels(dates_plot(5:5:end))
-title('Monthly series')
-legend([p1, p2], {'flows', 'stocks'})
-clearvars y_m_flow y_m_stock
+if Nm > 0
+    figure;
+    y_m_flow = y_m(ind_m_flow, :);
+    p1 = plot(y_m_flow(1, :)', '-', 'Color', [0, 0.4470, 0.7410, 0.7]); 
+    hold on; 
+    plot(y_m_flow(2:end, :)', '-', 'Color', [0, 0.4470, 0.7410, 0.7]); 
+    y_m_stock = y_m(~ind_m_flow, :);
+    p2 = plot(y_m_stock(1, :)', '-', 'Color', [0.8500, 0.3250, 0.0980, 0.7]);
+    hold on
+    plot(y_m_stock(2:end, :)', '-', 'Color', [0.8500, 0.3250, 0.0980, 0.7]);
+    xticks(ind_plot(5:5:end))
+    xticklabels(dates_plot(5:5:end))
+    title('Monthly series')
+    legend([p1, p2], {'flows', 'stocks'})
+    clearvars y_m_flow y_m_stock
+end
 
-figure;
-y_q_flow = y_q(ind_q_flow, :);
-p1 = plot(y_q_flow(1, :)', '-', 'Color', [0, 0.4470, 0.7410, 0.7]); 
-hold on; 
-plot(y_q_flow(2:end, :)', '-', 'Color', [0, 0.4470, 0.7410, 0.7]); 
-y_q_stock = y_q(~ind_q_flow, :);
-p2 = plot(y_q_stock(1, :)', '-', 'Color', [0.8500, 0.3250, 0.0980, 0.7]);
-hold on
-plot(y_q_stock(2:end, :)', '-', 'Color', [0.8500, 0.3250, 0.0980, 0.7]);
-xticks(ind_plot(5:5:end))
-xticklabels(dates_plot(5:5:end))
-title('Quarterly series')
-legend([p1, p2], {'flows', 'stocks'})
-clearvars y_q_flow y_q_stock
-
+if Nq > 0
+    figure;
+    y_q_flow = y_q(ind_q_flow, :);
+    p1 = plot(y_q_flow(1, :)', '-', 'Color', [0, 0.4470, 0.7410, 0.7]); 
+    hold on; 
+    plot(y_q_flow(2:end, :)', '-', 'Color', [0, 0.4470, 0.7410, 0.7]); 
+    y_q_stock = y_q(~ind_q_flow, :);
+    p2 = plot(y_q_stock(1, :)', '-', 'Color', [0.8500, 0.3250, 0.0980, 0.7]);
+    hold on
+    plot(y_q_stock(2:end, :)', '-', 'Color', [0.8500, 0.3250, 0.0980, 0.7]);
+    xticks(ind_plot(5:5:end))
+    xticklabels(dates_plot(5:5:end))
+    title('Quarterly series')
+    legend([p1, p2], {'flows', 'stocks'})
+    clearvars y_q_flow y_q_stock
+end
 
 %-------------------------------------------------------------------------%
 % run Kalman smoother (E-step!)
@@ -263,7 +268,7 @@ aux.ind_m_flow = ind_m_flow;
 aux.ind_q_flow = ind_q_flow;
 
 % state space form
-[Z, H, T, R, Q] = f_state_space_params(params, aux);
+[Z, H, T, R, Q] = f_state_space_params(params, aux, Nt);
 
 % Kalman smoother
 s0 = zeros(size(Z, 2), 1); P0 = 10 * eye(size(Z, 2));
@@ -506,8 +511,117 @@ if Nq > 0
 end
 
 %-------------------------------------------------------------------------%
-% starting values
+% test EM algorithm
 %-------------------------------------------------------------------------%
 
+% starting values
 params_init = f_start_vals(y_d_o, y_w_o, y_m_o, y_q_o, aux, Nr, Np);
 
+% call f_EMalg with tolerance equal to tol
+tol = 1e-4;
+params = f_EMalg(y_d_o, y_w_o, y_m_o, y_q_o, aux, params_init, tol);
+
+% run Kalman smoother 
+dat = [y_d_o; y_w_o; y_m_o; y_q_o]; 
+[Z, H, T, R, Q] = f_state_space_params(params, aux, Nt);
+s0 = zeros(size(T,1),1); 
+P0 = 100 * eye(size(T,1)); 
+[stT, ~, ~] = f_KS_DK_logL(dat,T,Z,H,R,Q,s0,P0);
+
+figure; plot(stT(1:Nr, :)')
+
+chi_d_hat = params.lam_d * stT(1:Nr, :);
+chi_d = lam_d * f; 
+figure; scatter(chi_d_hat(:), chi_d(:));
+refline(1, 0)
+ylabel('actual');
+xlabel('estimated');
+title('\chi: daily vars')
+
+for i = 1:Nd
+    x_est = chi_d_hat(i, :)';
+    y_est = chi_d(i, :)';
+    b_d(i) = (x_est'*x_est)\x_est'*y_est;
+    resid = y_est - x_est * b_d(i);
+    r2_d(i) = 1 - (resid'*resid) / (y_est'*y_est);
+end  
+
+chi_w_hat = params.lam_w * stT(id_f_w, :);
+chi_w = lam_w * f_w; 
+figure; scatter(chi_w_hat(:), chi_w(:));
+refline(1, 0)
+ylabel('actual');
+xlabel('estimated');
+title('\chi: weekly vars')
+
+for i = 1:Nw
+    x_est = chi_w_hat(i, :)';
+    y_est = chi_w(i, :)';
+    b_w(i) = (x_est'*x_est)\x_est'*y_est;
+    resid = y_est - x_est * b_w(i);
+    r2_w(i) = 1 - (resid'*resid) / (y_est'*y_est);
+end  
+
+chi_m_stock_hat = params.lam_q(~aux.ind_m_flow,:) * stT(id_f_m_stock, :);
+chi_m_stock = lam_q(~aux.ind_m_flow,:) * f_q;
+figure; scatter(chi_m_stock_hat(:), chi_m_stock(:));
+refline(1, 0);
+ylabel('actual');
+xlabel('estimated');
+title('\chi: monthly stock vars')
+
+for i = 1:Nq_stock
+    x_est = chi_m_stock_hat(i, :)';
+    y_est = chi_m_stock(i, :)';
+    b_m_stock(i) = (x_est'*x_est)\x_est'*y_est;
+    resid = y_est - x_est * b_m_stock(i);
+    r2_m_stock(i) = 1 - (resid'*resid) / (y_est'*y_est);
+end   
+
+chi_m_flow_hat = params.lam_q(aux.ind_m_flow,:) * stT(id_f_m_flow, :);
+chi_m_flow = lam_q(aux.ind_m_flow,:) * f_m_c;
+figure; scatter(chi_m_flow_hat(:), chi_m_flow(:));
+refline(1, 0)
+ylabel('actual');
+xlabel('estimated');
+title('\chi: monthly flow vars')
+
+for i = 1:Nq_flow
+    x_est = chi_m_flow_hat(i, :)';
+    y_est = chi_m_flow(i, :)';
+    b_m_flow(i) = (x_est'*x_est)\x_est'*y_est;
+    resid = y_est - x_est * b_m_flow(i);
+    r2_m_flow(i) = 1 - (resid'*resid) / (y_est'*y_est);
+end 
+
+chi_q_stock_hat = params.lam_q(~aux.ind_q_flow,:) * stT(id_f_q_stock, :);
+chi_q_stock = lam_q(~aux.ind_q_flow,:) * f_q;
+figure; scatter(chi_q_stock_hat(:), chi_q_stock(:));
+refline(1, 0);
+ylabel('actual');
+xlabel('estimated');
+title('\chi: quarterly stock vars')
+
+for i = 1:Nq_stock
+    x_est = chi_q_stock_hat(i, :)';
+    y_est = chi_q_stock(i, :)';
+    b_q_stock(i) = (x_est'*x_est)\x_est'*y_est;
+    resid = y_est - x_est * b_q_stock(i);
+    r2_q_stock(i) = 1 - (resid'*resid) / (y_est'*y_est);
+end   
+
+chi_q_flow_hat = params.lam_q(aux.ind_q_flow,:) * stT(id_f_q_flow, :);
+chi_q_flow = lam_q(aux.ind_q_flow,:) * f_q_c;
+figure; scatter(chi_q_flow_hat(:), chi_q_flow(:));
+refline(1, 0)
+ylabel('actual');
+xlabel('estimated');
+title('\chi: quarterly flow vars')
+
+for i = 1:Nq_flow
+    x_est = chi_q_flow_hat(i, :)';
+    y_est = chi_q_flow(i, :)';
+    b_q_flow(i) = (x_est'*x_est)\x_est'*y_est;
+    resid = y_est - x_est * b_q_flow(i);
+    r2_q_flow(i) = 1 - (resid'*resid) / (y_est'*y_est);
+end  

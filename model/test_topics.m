@@ -67,7 +67,8 @@ params = f_start_vals(y_d_stand, [], [], y_q_stand, aux, Nr, Np);
 %-------------------------------------------------------------------------%
 
 params_init = params; 
-params = f_EMalg(y_d_stand, [], [], y_q_stand, aux, params); 
+tol = 1e-5;
+params = f_EMalg(y_d_stand, [], [], y_q_stand, aux, params, tol); 
 
 %-------------------------------------------------------------------------%
 % run KF/KS to get back-, now- and forecasts

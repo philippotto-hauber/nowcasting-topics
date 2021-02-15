@@ -30,6 +30,7 @@ function [stT,PtT,LL] = f_KS_DK_logL(data,T,Z,H,R,Q,s0,P0)
         % proceed with recursions
         v{t} = datatemp - WZ*a(:,t);
         F{t} = WZ*P(:,:,t)*WZ' + W*H*W';
+        F{t} = (F{t}' + F{t}) / 2; % for numerical stability
         K = T(:,:, t)*P(:,:,t)*WZ'/(F{t}+eye(size(datatemp,1))*1e-5);
         L(:,:,t) = T(:,:, t) - K*WZ;
 

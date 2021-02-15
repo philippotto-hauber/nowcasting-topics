@@ -40,7 +40,7 @@ for iter = 1 : maxiter
     % - check convergence
     % ---------------------------  
     cLL = (LL - LL_prev)/(abs(LL)/2 + abs(LL_prev)/2) ; 
-    if iter>1 && cLL < 1e-03; break; end    
+    if iter>1 && cLL < 1e-06; break; end    
     LL_prev = LL;
     
     % ------------------------------------------------------------------- %
@@ -82,6 +82,7 @@ for iter = 1 : maxiter
         params.lam_q = [params.lam_q_flow; params.lam_q_stock];
         params.sig2_q = [params.sig2_q_flow; params.sig2_q_stock];
     end
+    
 
     % Phi and Omeg
     params.Phi = (stT(id_f, :)*stT(id_f_lags, :)' + sum(PtT(id_f,id_f_lags,:),3))/(stT(id_f_lags, :)*stT(id_f_lags, :)' + sum(PtT(id_f_lags,id_f_lags,:),3)) ; 

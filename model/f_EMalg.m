@@ -1,4 +1,4 @@
-function params = f_EMalg(y_d, y_w, y_m, y_q, aux, params)
+function params = f_EMalg(y_d, y_w, y_m, y_q, aux, params, tol)
 % ------------------------------------------------------------------- %
 % - EM algorithm a la Banbura and Modugno (2014) -------------------- %
 % ------------------------------------------------------------------- %
@@ -40,7 +40,7 @@ for iter = 1 : maxiter
     % - check convergence
     % ---------------------------  
     cLL = (LL - LL_prev)/(abs(LL)/2 + abs(LL_prev)/2) ; 
-    if iter>1 && cLL < 1e-06; break; end    
+    if iter>1 && cLL < tol; break; end    
     LL_prev = LL;
     
     % ------------------------------------------------------------------- %
@@ -60,10 +60,10 @@ for iter = 1 : maxiter
     % lam_m and sig2_m
     if Nm > 0
         if Nm_flow > 0
-            [params.lam_m_flow, params.sig2_m_flow] = f_sample_lam_sig(y_m(ind_m_flow,:), stT(id_f_m_flow, :), PtT(id_f_m_flow, id_f_m_flow, :), params.sig2_m(ind_m_flow));
+            [params.lam_m_flow, params.sig2_m_flow] = f_sample_lam_sig(y_m(aux.ind_m_flow,:), stT(id_f_m_flow, :), PtT(id_f_m_flow, id_f_m_flow, :), params.sig2_m(aux.ind_m_flow));
         end
         if Nm_stock > 0
-            [params.lam_m_stock, params.sig2_m_stock] = f_sample_lam_sig(y_m(~ind_m_flow,:), stT(id_f_m_stock, :), PtT(id_f_m_stock, id_f_m_stock, :), params.sig2_m(~ind_m_flow));
+            [params.lam_m_stock, params.sig2_m_stock] = f_sample_lam_sig(y_m(~aux.ind_m_flow,:), stT(id_f_m_stock, :), PtT(id_f_m_stock, id_f_m_stock, :), params.sig2_m(~aux.ind_m_flow));
         end
         params.lam_m = [params.lam_m_flow; params.lam_m_stock];
         params.sig2_m = [params.sig2_m_flow; params.sig2_m_stock];
@@ -76,7 +76,7 @@ for iter = 1 : maxiter
         end
 
         if Nq_stock > 0         
-            [params.lam_q_stock, params.sig2_q_stock] = f_sample_lam_sig(y_q(~ind_q_flow,:), stT(id_f_q_stock, :), PtT(id_f_q_stock, id_f_q_stock, :), params.sig2_q(~ind_q_flow));
+            [params.lam_q_stock, params.sig2_q_stock] = f_sample_lam_sig(y_q(~aux.ind_q_flow,:), stT(id_f_q_stock, :), PtT(id_f_q_stock, id_f_q_stock, :), params.sig2_q(~aux.ind_q_flow));
         end
 
         params.lam_q = [params.lam_q_flow; params.lam_q_stock];

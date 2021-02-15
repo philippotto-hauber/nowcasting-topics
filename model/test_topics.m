@@ -10,8 +10,8 @@ clear; close all; clc;
 %-------------------------------------------------------------------------%
 filename = 'vint_2010_1_30.csv';
 dirname = '..\data\';
-Nr = 2;
-Np = 1;
+Nr = 1;
+Np = 6;
 
 %-------------------------------------------------------------------------%
 % load data
@@ -26,7 +26,8 @@ aux.ind_sample = logical(tmp.data(:, find(strcmp('ind_sample', tmp.textdata(1,:)
 
 % daily data
 ind_y_d = find(contains(tmp.textdata(1,:), 'y_d_')) - offset_numcols;
-ind_y_d = setdiff(ind_y_d, ind_y_d([6, 9, 23])); % manually remove T05, T07, T21
+%ind_y_d = setdiff(ind_y_d, ind_y_d([6, 9, 23])); % manually remove T05, T07, T21
+ind_y_d = [1 11 22 37 45] + 4; % topics T0, T10, T21, T36, T44 => highest correlated with GDP
 y_d = tmp.data(aux.ind_sample, ind_y_d)';
 y_d_fore = tmp.data(~aux.ind_sample, ind_y_d)';
 

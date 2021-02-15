@@ -128,9 +128,9 @@ function [lam, sig2] = f_ols(y, f, var_diag)
     lam = b'; 
     e2 = (y_estim - x_estim * b)' * (y_estim - x_estim * b);
     if var_diag
-        sig2 = diag(e2/size(f, 2));
+        sig2 = diag(e2/size(x_estim, 1));
     else
-        sig2 = e2 / size(f, 2);
+        sig2 = e2 / size(x_estim, 1);
     end
 end
 

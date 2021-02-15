@@ -31,8 +31,6 @@ ind_y_d = [1 11 22 37 45] + 4; % topics T0, T10, T21, T36, T44 => highest correl
 y_d = tmp.data(aux.ind_sample, ind_y_d)';
 y_d_fore = tmp.data(~aux.ind_sample, ind_y_d)';
 
-y_d = f_interpol(y_d); % linearly interpolate so that there are no missings!
-
 % quarterly data
 ind_y_q = find(contains(tmp.textdata(1,:), 'y_q_')) - offset_numcols;
 y_q = tmp.data(aux.ind_sample, ind_y_q)';
@@ -78,7 +76,7 @@ params = f_EMalg(y_d_stand, [], [], y_q_stand, aux, params);
 dat = [[y_d_stand y_d_fore_stand]; [y_q_stand y_q_fore_stand]]; 
 [Z, H, T, R, Q] = f_state_space_params(params, aux, size(dat, 2));
 s0 = zeros(size(T,1),1); 
-P0 = 1 * eye(size(T,1)); 
+P0 = 100 * eye(size(T,1)); 
 [stT, ~, ~] = f_KS_DK_logL(dat,T,Z,H,R,Q,s0,P0);
 
 figure;
@@ -127,6 +125,9 @@ xticklabels(dates_plot(1:5:end))
 legend([p1, p2, p3], {'in-sample', 'out-of-sample', 'actual'}, 'Location','SouthWest')
 title('quarterly GDP growth (ann.), forecasts and actuals')
 
-
+% save figure
+fig = gcf;
+orient(fig,'landscape')
+print('gdp_2010_01_30','-dpdf','-fillpage')
 
 

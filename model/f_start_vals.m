@@ -14,7 +14,7 @@ Nt = size(y_d, 2);
 %-----------------------------------%
 
 % check for missings and interpolate if need be!
-if any(isnan(y_d))
+if sum(any(isnan(y_d), 1)) > 0
     y_d_star = f_interpol(y_d);
 else
     y_d_star = y_d;

@@ -1,7 +1,45 @@
 function params = f_EMalg(y_d, y_w, y_m, y_q, aux, params, tol)
-% ------------------------------------------------------------------- %
-% - EM algorithm a la Banbura and Modugno (2014) -------------------- %
-% ------------------------------------------------------------------- %
+% ----------------------------------------------------------------------- %
+% - EM algorithm a la Banbura and Modugno (2014) mixing daily, weekly
+% - monthly and quarterly series. For the latter, aggregation schemes
+% - for both stocks and flows are implemented (see Banbura et al. 2011).
+% ----------------------------------------------------------------------- %
+% - Inputs:
+% - y_d: Nd x Nt matrix of daily series 
+% - y_w: Nw x Nt matrix of weekly series (can be empty!)
+% - y_m: Nm x Nt matrix of monthly series (can be empty!)
+% - y_q: Nq x Nt matrix of quarterly series (can be empty!)
+% - aux: structure containing the following elements
+% -     - ind_sample: logical of dimension Nt + Nh, indicating where the
+% -                   obs used to estimate the model ends
+% -     - ind_q_flow: logical indicating which of the quarterly series are
+% -                   flow variables
+% -     - Xi_qd: indicator variable that equals 0 on the first day of a
+% -              quarter, 1 otherwise
+% -     - W_qd_c: weights of daily obs corresponding to the current quarter
+% -     - W_qd_p: weights of daily obs corresponding to the previous quarter
+% - params: structure containing starting values (see below for elements)
+% - tol: tolerance level determining when the algorithm has converged
+% ----------------------------------------------------------------------- %
+% - Output
+% - params: structure with the following elements
+% -          Phi: Nr x (Np-1)*Nr factor VAR coefficient matrix
+% -          Omeg: Nr X Nr covariance matrix of factor VAR residuals
+% -          lam_d: Nd x Nr loadings corresponding to daily series
+% -          sig2_d: Nd x 1 vector of idiosyncratic covariances of daily series
+% -          lam_w: Nw x Nr loadings corresponding to weekly series
+% -          sig2_w: Nw x 1 vector of idiosyncratic covariances of weekly series
+% -          lam_m_flow: Nm_flow x Nr loadings corresponding to monthly flow series
+% -          sig2_m_flow: Nm_flow x 1 vector of idiosyncratic covariances of monthly flow series
+% -          lam_m_stock: Nm_stock x Nr loadings corresponding to monthly stock series
+% -          sig2_m_stock: Nm_stock x 1 vector of idiosyncratic covariances of monthly stock series
+% -          lam_q_flow: Nq_flow x Nr loadings corresponding to quarterly flow series
+% -          sig2_q_flow: Nq_flow x 1 vector of idiosyncratic covariances of quarterly flow series
+% -          lam_q_stock: Nq_stock x Nr loadings corresponding to quarterly stock series
+% -          sig2_q_stock: Nq_stock x 1 vector of idiosyncratic covariances of quarterly stock series
+% ----------------------------------------------------------------------- %
+% - PH 2021/02/16
+% ----------------------------------------------------------------------- %
 
 % back out dimensions of state space system
 Nd = size(params.lam_d, 1);

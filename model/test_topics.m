@@ -11,7 +11,7 @@ clear; close all; clc;
 filename = 'vint_2010_1_30.csv';
 dirname = '..\data\';
 Nr = 1;
-Np = 6;
+Np = 10;
 
 %-------------------------------------------------------------------------%
 % load data
@@ -25,9 +25,9 @@ offset_numcols = size(tmp.textdata, 2) - size(tmp.data, 2);
 aux.ind_sample = logical(tmp.data(:, find(strcmp('ind_sample', tmp.textdata(1,:))) - offset_numcols));
 
 % daily data
-ind_y_d = find(contains(tmp.textdata(1,:), 'y_d_')) - offset_numcols;
+%ind_y_d = find(contains(tmp.textdata(1,:), 'y_d_')) - offset_numcols;
 %ind_y_d = setdiff(ind_y_d, ind_y_d([6, 9, 23])); % manually remove T05, T07, T21
-ind_y_d = [1 11 22 37 45] + 4; % topics T0, T10, T21, T36, T44 => highest correlated with GDP
+ind_y_d = [1 11 37 45] + 4; % topics T0, T10, T21, T36, T44 => highest correlated with GDP
 y_d = tmp.data(aux.ind_sample, ind_y_d)';
 y_d_fore = tmp.data(~aux.ind_sample, ind_y_d)';
 
@@ -46,6 +46,11 @@ aux.W_qd_c = tmp.data(:, find(strcmp('W_qd_c', tmp.textdata(1,:))) - offset_numc
 ind_backcast = logical(tmp.data(:, find(strcmp('ind_backcast', tmp.textdata(1,:))) - offset_numcols));
 ind_nowcast = logical(tmp.data(:, find(strcmp('ind_nowcast', tmp.textdata(1,:))) - offset_numcols));
 ind_forecast = logical(tmp.data(:, find(strcmp('ind_forecast1Q', tmp.textdata(1,:))) - offset_numcols));
+
+figure;
+plot(y_d')
+title('daily series')
+
 
 %-------------------------------------------------------------------------%
 % prepare data for estimation
@@ -92,18 +97,21 @@ title('f_q: cumulated daily factors')
 % plot daily q-o-q growth along with actuals 
 %-------------------------------------------------------------------------%
 
-gdp_hat_stand = params.lam_q_flow * stT(end-2*Nr+1:end-Nr,:);
-gdp_hat = gdp_hat_stand * std_gdp + mean_gdp;
+chi_q_stand = params.lam_q_flow * stT(end-2*Nr+1:end-Nr,:);
+chi_q = chi_q_stand * std_gdp + mean_gdp;
 Nt = sum(aux.ind_sample); 
 Nh = length(aux.ind_sample) - Nt; % sum(aux.ind_sample == 0)
-gdp_fore = NaN(1, Nt+Nh); 
-gdp_fore(1, ind_backcast) = gdp_hat(1, ind_backcast); 
-gdp_fore(1, ind_nowcast) = gdp_hat(1, ind_nowcast); 
-gdp_fore(1, ind_forecast) = gdp_hat(1, ind_forecast); 
-gdp_fore(1, end) = gdp_hat(1, end);
+y_eoq_hat = NaN(1, Nt);
+y_eoq_hat(:, ~isnan(y_q)) = chi_q(:, ~isnan(y_q)); 
+
+y_eoq_fore = NaN(1, Nt+Nh); 
+y_eoq_fore(1, ind_backcast) = chi_q(1, ind_backcast); 
+y_eoq_fore(1, ind_nowcast) = chi_q(1, ind_nowcast); 
+y_eoq_fore(1, ind_forecast) = chi_q(1, ind_forecast); 
+y_eoq_fore(1, end) = chi_q(1, end);
 
 % actuals
-acts = NaN(1, length(aux.ind_sample));
+acts = [y_q NaN(1, Nh)];
 acts(1, ind_backcast) = -0.04;
 acts(1, ind_nowcast) = 0.64;
 acts(1, ind_forecast) = 9.1;
@@ -115,15 +123,15 @@ dates_plot = tmp.data(ind_plot, 1);
 
 
 figure; 
-plot([gdp_hat(:, 1: sum(aux.ind_sample)) NaN(1, Nh)]', 'b-')
+plot([chi_q(:, 1: sum(aux.ind_sample)) NaN(1, Nh)]', 'b-');
 hold on
-p1 = plot([y_q, NaN(1, Nh)]', 'bo');
-plot([NaN(1, Nt), gdp_hat(:, sum(aux.ind_sample)+1:end)]', 'r-')
-p2 = plot(gdp_fore', 'ro');
-p3 = plot(acts, 'kx');
+p1 = plot([y_eoq_hat NaN(1, Nh)]', 'bo',  'MarkerFaceColor', 'b');
+plot([NaN(1, Nt), chi_q(:, sum(aux.ind_sample)+1:end)]', 'r-')
+p2 = plot(y_eoq_fore', 'ro', 'MarkerFaceColor', 'r');
+p3 = plot(acts, 'kd', 'MarkerFaceColor', 'k', 'MarkerSize',4);
 xticks(ind_plot(1:5:end))
 xticklabels(dates_plot(1:5:end))
-legend([p1, p2, p3], {'in-sample', 'out-of-sample', 'actual'}, 'Location','SouthWest')
+legend([p1, p2, p3], {'in-sample', 'out-of-sample', 'actuals'}, 'Location','best', 'Fontsize', 12)
 title('quarterly GDP growth (ann.), forecasts and actuals')
 
 % save figure

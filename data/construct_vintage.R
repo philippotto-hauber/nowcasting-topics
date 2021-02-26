@@ -115,6 +115,7 @@ Ntopics <- 10 # select Ntopics topics that have the highest correlation with qua
 K = 60 # window of moving average
 bw = 1200 # bandwidth for biweight filter
 aalpha <- 10 # number of IQR between median to determine outlier
+corr_select <- 0.25 # include topics with an absolute correlation larger than corr_select
 
 # LOAD TOPICS ----
 #_____________________________________________________#
@@ -123,7 +124,7 @@ aalpha <- 10 # number of IQR between median to determine outlier
 #_linearly interpolate to fill-in NA (commented out because not necessary)
 #_____________________________________________________#
 
-df_raw <- read.csv("./topics/daily_topics.csv")
+df_raw <- read.csv("./topics/daily_topics_2.csv")
 
 # add date and quarter variable
 df_raw %>%
@@ -262,7 +263,7 @@ dates_tmp %>%
 # get rid of dates_tmp
 rm(dates_tmp)
 
-# APPEND ROWS FOR FORECASTS
+# APPEND ROWS FOR FORECASTS ----
 
 dates_tmp <- data.frame(date = seq(max(df_gdp$date), 
                                    as.Date(date_h), 
@@ -332,6 +333,41 @@ for (y in years)
 # cbind to df
 df_gdp <- cbind(df_gdp, select(df_W_qd, W_qd_c, W_qd_p))
 
+# PRE-SELECT TOPICS ----
+
+# convert transformed topics to quarterly frequency
+df_topics_trafo %>% 
+  pivot_longer(cols = -c(date, year, quarter, month, day), 
+               names_to = "topic", 
+               values_to = "vals") %>%
+  group_by(topic, year, quarter) %>%
+  summarise(avg_vals = mean(vals, na.rm = T)) %>%
+  pivot_wider(id_cols = c(topic, year, quarter), 
+              names_from = topic, 
+              values_from = avg_vals) -> df_topics_trafo_Q
+
+# merge with quarterly GDP
+df_gdp %>%
+  filter(!is.na(d_gdp)) %>% 
+  select(year, quarter, d_gdp) %>%
+  merge(df_topics_trafo_Q, by = c("year", "quarter")) -> df_corr
+
+# calculate correlation between GDP and topics
+cor_topics_gdp <- cor(as.matrix(df_corr[, -c(1:2)]))
+cor_topics_gdp <- cor_topics_gdp[1, 2:ncol(cor_topics_gdp)] # first row contains correlations of topics with GDP growth
+
+# select those with a correlation of over corr_select in absolute terms
+list_topics_select <- names(cor_topics_gdp)[abs(cor_topics_gdp) > corr_select]
+
+df_topics_trafo %>%
+  pivot_longer(cols = -c(date, year, quarter, month, day), 
+               names_to = "topic", 
+               values_to = "vals") %>%
+  filter(topic %in% list_topics_select) %>%
+  pivot_wider(id_cols = c(topic, date, year, quarter, month, day), 
+              names_from = topic, 
+              values_from = vals) -> df_topics_trafo
+
 # EXPORT TO CSV ----
 #_____________________________________________________#
 #_indices for back-, now- and forecasts
@@ -350,12 +386,6 @@ df_gdp %>%
   select(date) -> dates_fore
 
 diff_q <- floor(as.numeric(dates_fore[, 1, drop = T] - as.Date(vintage)) / 90)
-
-# ind_backcast <- mat.or.vec(nrow(df_gdp), 1)
-# ind_nowcast <- mat.or.vec(nrow(df_gdp), 1)
-# ind_forecast <- mat.or.vec(nrow(df_gdp), sum(diff_q > 0))
-# if (!is.null(dim(ind_forecast))) # more than 1 forecast
-#   counter_col <- 1
 
 df_ind <- data.frame()
 counter_fore <- 1

@@ -152,6 +152,8 @@ title('quarterly GDP growth (ann.), forecasts and actuals')
 % save figure
 fig = gcf;
 orient(fig,'landscape')
-print('results_2010_01_30','-dpdf','-fillpage')
+fig.Units = 'inches';
+fig.OuterPosition = [0.25 0.25 10 7];
+exportgraphics(fig, 'results_2010_01_30.pdf'); 
 
 

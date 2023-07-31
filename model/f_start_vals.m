@@ -114,10 +114,12 @@ else
     params.sig2_q = [];
 end
 
-% Fix the loading of the first daily factor to 1
-for i = 1:size(params.lam_d, 2)
-    params.lam_d(:, i) = params.lam_d(:, i) / params.lam_d(1, i);
-    params.lam_q_flow(i) = params.lam_q_flow(i) / params.lam_d(1, i);
+if Nr>1
+    % Fix the loading of the first factor for each series to 1
+    for i = 1:size(params.lam_d, 1)
+        loading_1 = params.lam_d(i, 1); % get the first factor loading of each series
+        params.lam_d(i, :) = params.lam_d(i, :) / loading_1; % adjust the rest of the loadings for the series
+    end
 end
 
 end

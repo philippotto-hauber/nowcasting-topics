@@ -23,10 +23,10 @@ function params = f_EMalg(y_d, y_w, y_m, y_q, aux, params, tol)
 % ----------------------------------------------------------------------- %
 % - Output
 % - params: structure with the following elements
-% -          Phi: Nr x (Np-1)*Nr factor VAR coefficient matrix
+% -          Phi: Nr x (Np*Nr) factor VAR coefficient matrix
 % -          Omeg: Nr X Nr covariance matrix of factor VAR residuals
 % -          lam_d: Nd x Nr loadings corresponding to daily series
-% -          sig2_d: Nd x 1 vector of idiosyncratic covariances of daily series
+% -          sig2_d: Nd x 1 vector of idiosyncratic variances of daily series
 % -          lam_w: Nw x Nr loadings corresponding to weekly series
 % -          sig2_w: Nw x 1 vector of idiosyncratic covariances of weekly series
 % -          lam_m_flow: Nm_flow x Nr loadings corresponding to monthly flow series
@@ -85,9 +85,9 @@ for iter = 1 : maxiter
     % - M-Step ---------------------------------------------------------- %
     % ------------------------------------------------------------------- %
     
-    % lam_d and sig_d
+    % lam_d and sig2_d
     if Nd > 0
-        [params.lam_d, params.sig_d] = f_sample_lam_sig(y_d, stT(id_f_d, :), PtT(id_f_d, id_f_d, :), params.sig2_d);
+        [params.lam_d, params.sig2_d] = f_sample_lam_sig(y_d, stT(id_f_d, :), PtT(id_f_d, id_f_d, :), params.sig2_d);
     end
 
     % lam_w and sig2_w
@@ -121,6 +121,11 @@ for iter = 1 : maxiter
         params.sig2_q = [params.sig2_q_flow; params.sig2_q_stock];
     end
     
+    % Fix the loading of the first daily factor to 1
+    for i = 1:size(params.lam_d, 2)
+        params.lam_d(:, i) = params.lam_d(:, i) / params.lam_d(1, i);
+        params.lam_q_flow(i) = params.lam_q_flow(i) / params.lam_d(1, i);
+    end
 
     % Phi and Omeg
     params.Phi = (stT(id_f, :)*stT(id_f_lags, :)' + sum(PtT(id_f,id_f_lags,:),3))/(stT(id_f_lags, :)*stT(id_f_lags, :)' + sum(PtT(id_f_lags,id_f_lags,:),3)) ; 

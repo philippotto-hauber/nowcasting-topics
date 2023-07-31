@@ -113,6 +113,13 @@ else
     params.lam_q = []; 
     params.sig2_q = [];
 end
+
+% Fix the loading of the first daily factor to 1
+for i = 1:size(params.lam_d, 2)
+    params.lam_d(:, i) = params.lam_d(:, i) / params.lam_d(1, i);
+    params.lam_q_flow(i) = params.lam_q_flow(i) / params.lam_d(1, i);
+end
+
 end
 
 %-----------------------------------%
@@ -142,7 +149,7 @@ function [f_, f_c] = f_cum_f(f, Xi, Wc, Wp)
     for t = 1:Nt
         if t == 1 || Xi(t) == 0
             f_(:, t) = zeros(Nr, 1);
-            f_c(:, t) = f_p;
+            f_c(:, t) = f_p + Wc(t) * f(:, t);
             f_p = zeros(Nr, 1);
         else
             f_(:, t) = f_(:, t-1) + f(:, t);

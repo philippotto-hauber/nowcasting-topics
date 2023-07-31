@@ -1,7 +1,20 @@
 rm(list = ls())
-setwd("C:/Users/Philipp/Documents/GitHub/nowcasting-topics/data")
 #_____________________________________________________#
-#_This script ...
+#_This script processes and prepares a dataset containing annualized GDP growth 
+# and daily topic-based indicators for macroeconomic forecasting.  
+# It performs several key tasks: 
+# 1. Outlier removal from the topic-based indicators.
+# 2. Applying a moving average for smoothing.
+# 3. Detrending the series using a biweight filter.
+# 4. Reimposing the NA pattern in the dataset.
+# 5. Downloading GDP data and calculating the annualized quarterly growth rate.
+# 6. Preparing for the forecast by appending rows and creating the Xi_q indicator.
+# 7. Calculating weights for flow variable.
+# 8. Pre-selecting topics based on their correlation with GDP growth.
+# 9. Finally, the script generates indicators for backcasting, nowcasting, 
+# and forecasting, merges all dataframes, adds flags indicating the estimation sample, 
+# and exports the prepared dataset to a CSV file.
+# This prepared dataset can then be used for economic forecasting with the dynamic factor model.
 #_____________________________________________________#
 
 # PACKAGES ----
@@ -69,7 +82,7 @@ bw_filter <- function(y, bw)
     if (t <= bw) {
       
       indY <- c(1 : (2 * bw - (bw - t)))
-      indOmeg <- c((bw - t + 1):(2 * bw)) 
+      indOmeg <- c((bw - t + 2):(2 * bw + 1))  
       kap <- 1 / ( sum(omeg[indOmeg]))
       tau[ t ] <- kap * omeg[indOmeg] %*% y_noNA[indY] 
       
@@ -364,7 +377,7 @@ df_topics_trafo %>%
                names_to = "topic", 
                values_to = "vals") %>%
   filter(topic %in% list_topics_select) %>%
-  pivot_wider(id_cols = c(topic, date, year, quarter, month, day), 
+  pivot_wider(id_cols = c(date, year, quarter, month, day), 
               names_from = topic, 
               values_from = vals) -> df_topics_trafo
 

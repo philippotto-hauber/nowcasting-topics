@@ -113,6 +113,15 @@ else
     params.lam_q = []; 
     params.sig2_q = [];
 end
+
+if Nr>1
+    % Fix the loading of the first factor for each series to 1
+    for i = 1:size(params.lam_d, 1)
+        loading_1 = params.lam_d(i, 1); % get the first factor loading of each series
+        params.lam_d(i, :) = params.lam_d(i, :) / loading_1; % adjust the rest of the loadings for the series
+    end
+end
+
 end
 
 %-----------------------------------%
@@ -142,7 +151,7 @@ function [f_, f_c] = f_cum_f(f, Xi, Wc, Wp)
     for t = 1:Nt
         if t == 1 || Xi(t) == 0
             f_(:, t) = zeros(Nr, 1);
-            f_c(:, t) = f_p;
+            f_c(:, t) = f_p + Wc(t) * f(:, t);
             f_p = zeros(Nr, 1);
         else
             f_(:, t) = f_(:, t-1) + f(:, t);

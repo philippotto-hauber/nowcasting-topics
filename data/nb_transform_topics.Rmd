@@ -9,13 +9,14 @@ This notebook illustrates how we transform the raw daily time series of topics b
 
 ```{r echo=T, message = FALSE, warning = FALSE}
 rm(list = ls())
-setwd("C:/Users/Philipp/Documents/GitHub/nowcasting-topics/data/")
 library(ggplot2)
 library(lubridate)
 library(dplyr)
 library(tidyr)
 library(fredmdr)
 library(bundesbank)
+library(tibble)
+library(ggsci)
 ```
 
 
@@ -141,7 +142,7 @@ bw_filter <- function(y, bw)
   omeg = (1 - (j/bw) ^ 2) ^ 2  
   
   # check for NA's in y
-    n_NA <- sum(is.na(y)) 
+  n_NA <- sum(is.na(y)) 
   y_noNA <- y[(n_NA + 1) : length(y)]
   Nt <- length(y_noNA)
   
@@ -152,7 +153,7 @@ bw_filter <- function(y, bw)
     if (t <= bw) {
       
       indY <- c(1 : (2 * bw - (bw - t)))
-      indOmeg <- c((bw - t + 1):(2 * bw)) 
+      indOmeg <- c((bw - t + 2):(2 * bw + 1)) 
       kap <- 1 / ( sum(omeg[indOmeg]))
       tau[ t ] <- kap * omeg[indOmeg] %*% y_noNA[indY] 
       
@@ -332,7 +333,7 @@ pdf(file="plot_pc_trafo.pdf", paper = "a4r", width = 10, height = 8)
 matplot(df_topics$date, pca$f, 
         type = "l", lty = ltys, col = cols, 
         main = "First 10 principal components of transformed topics",
-        ylab = "standard deviations", xlab = "")
+        ylab = "", xlab = "")
 legend(as.Date("2004-01-01"), 2.0, 
        legend = paste0("PC", seq(1, 10)), 
        col = cols,
@@ -368,7 +369,7 @@ df_trafo %>%
                values_to = "vals") %>%
   group_by(topic, year, quarter) %>%
   summarise(avg_vals = mean(vals, na.rm = T)) %>%
-  pivot_wider(id_cols = c(topic, year, quarter), 
+  pivot_wider(id_cols = c(year, quarter), 
               names_from = topic, 
               values_from = avg_vals) -> df_trafo_Q
 ```
@@ -385,7 +386,7 @@ df_gdp %>%
   mutate(year = as.numeric(substr(date, 1, 4)), 
          month = as.numeric(substr(date, 6, 7)) + 1,  
          quarter = ceiling(month/3),
-         date = make_date(year = year, month = month + 1, day = 15) # middle of the quarter, e.g. 15.2. for Q1
+         date = make_date(year = year, month = month, day = 15) # middle of the quarter, e.g. 15.2. for Q1
          )-> df_gdp
 
 # adjust name of series
@@ -402,7 +403,7 @@ df_gdp <- df_gdp[df_gdp$year >= 1994 & df_gdp$year <= 2018, ]
 Calculate correlation between topics and GDP
 
 ```{r}
-cor_topics_gdp <- cor(cbind(as.matrix(df_trafo_Q[, -c(1:2)]), df_gdp$d_gdp))
+cor_topics_gdp <- cor(cbind(as.matrix(df_trafo_Q[, -c(1:2)]), df_gdp$d_gdp), use = "complete.obs")
 
 # last row contains correlations of topics with GDP growth
 cor_topics_gdp <- cor_topics_gdp[nrow(cor_topics_gdp), 1:(ncol(cor_topics_gdp) - 1)] 

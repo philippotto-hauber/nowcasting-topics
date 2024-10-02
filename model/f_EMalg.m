@@ -121,13 +121,10 @@ for iter = 1 : maxiter
         params.sig2_q = [params.sig2_q_flow; params.sig2_q_stock];
     end
     
-    if Nr>1
-        % Fix the loading of the first factor for each series to 1
-        for i = 1:size(params.lam_d, 1)
-            loading_1 = params.lam_d(i, 1); % get the first factor loading of each series
-            params.lam_d(i, :) = params.lam_d(i, :) / loading_1; % adjust the rest of the loadings for the series
-        end
-    end
+    %if Nr>1
+    %    % Fix the loading of the first factor for the first variable to 1
+    %    params.lam_d(1, :) = params.lam_d(1, :) / params.lam_d(1, 1);
+    %end
 
     % Phi and Omeg
     params.Phi = (stT(id_f, :)*stT(id_f_lags, :)' + sum(PtT(id_f,id_f_lags,:),3))/(stT(id_f_lags, :)*stT(id_f_lags, :)' + sum(PtT(id_f_lags,id_f_lags,:),3)) ; 
